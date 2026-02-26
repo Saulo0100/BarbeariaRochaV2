@@ -1,0 +1,286 @@
+﻿using BarbeariaRocha.Aplicacao.Contratos;
+using BarbeariaRocha.Aplicacao.Helper;
+using BarbeariaRocha.Infraestrutura.Contexto;
+using BarbeariaRocha.Modelos.Entidades;
+using BarbeariaRocha.Modelos.Enums;
+using BarbeariaRocha.Modelos.Paginacao;
+using BarbeariaRocha.Modelos.Request.Agendamento;
+using BarbeariaRocha.Modelos.Response.Agendamento;
+using Microsoft.EntityFrameworkCore;
+
+namespace BarbeariaRocha.Aplicacao.Servicos
+{
+    public class AgendamentoApp(Contexto contexto) : IAgendamentoApp
+    {
+        private readonly Contexto _contexto = contexto;
+        public AgendamentoDetalheResponse AgendamentoAtual(int barbeiroId)
+        {
+            var agendamento = _contexto.Agendamento
+                .Where(a => a.BarbeiroId == barbeiroId &&
+                           a.Status != AgendamentoStatus.Concluido.ToString() &&
+                           a.Status != AgendamentoStatus.CanceladoPeloCliente.ToString() &&
+                           a.Status != AgendamentoStatus.CanceladoPeloBarbeiro.ToString())
+                .OrderBy(a => a.DataHora)
+                .FirstOrDefault() ?? throw new Exception("Nenhum agendamento ativo encontrado.");
+
+            var barbeiro = _contexto.Usuario.Find(agendamento.BarbeiroId) ?? throw new Exception("Barbeiro não encontrado.");
+
+            return new AgendamentoDetalheResponse
+            {
+                Id = agendamento.Id,
+                NomeCliente = agendamento.NomeCliente,
+                NomeBarbeiro = barbeiro.Nome,
+                NumeroCliente = agendamento.NumeroCliente,
+                Status = agendamento.Status,
+                Data = agendamento.DataHora,
+                Servico = _contexto.Servico.Find(agendamento.ServicoId)?.Descricao!
+            };
+        }
+
+        public void EditarECompletarAgendamento(int id, AgendamentoEditarRequest request)
+        {
+            var agendamento = _contexto.Agendamento
+                .FirstOrDefault(a => a.Id == id) ?? throw new Exception("Agendamento não encontrado.");
+
+            var novoServico = _contexto.Servico.Find(request.ServicoId) ?? throw new Exception("Serviço não encontrado.");
+
+            agendamento.ServicoId = novoServico.Id;
+
+            agendamento.MetodoPagamento = request.MetodoPagamento.ToString();
+            agendamento.Status = AgendamentoStatus.Concluido.ToString();
+
+            _contexto.SaveChanges();
+        }
+
+        public void CancelarAgendamento(int id)
+        {
+            var agendamento = _contexto.Agendamento.Find(id) ?? throw new Exception("Agendamento não encontrado.");
+            agendamento.Status = AgendamentoStatus.CanceladoPeloBarbeiro.ToString();
+            _contexto.SaveChanges();
+        }
+
+        public void CompletarAgendamento(AgendamentoCompletarRequest request)
+        {
+            var agendamento = _contexto.Agendamento.Find(request.Id) ?? throw new Exception("Agendamento não encontrado.");
+            agendamento.Status = AgendamentoStatus.Concluido.ToString();
+            agendamento.MetodoPagamento = request.MetodoPagamento.ToString();
+            _contexto.SaveChanges();
+        }
+
+        public void CriarAgendamento(AgendamentoCriarRequest request)
+        {
+            var tokenValido = _contexto.CodigoConfirmacao
+               .FirstOrDefault(t => t.Numero == request.Numero
+                                   && t.Codigo == request.CodigoConfirmacao
+                                   && !t.Confirmado
+                                   && t.DtExpiracao.ToUniversalTime() > DateTime.UtcNow) ?? throw new Exception("Código de confirmação inválido ou expirado.");
+
+            tokenValido.Confirmado = true;
+
+            if (request.DtAgendamento == default)
+                throw new ArgumentException("Data e hora do agendamento são obrigatórios.", nameof(request.DtAgendamento));
+
+            // Verificar se existe exceção para essa data
+            var dataAgendamento = request.DtAgendamento.Date;
+            var existeExcecao = _contexto.Excecao
+                .Any(e => e.Excluido == 0 &&
+                         e.Data.Date == dataAgendamento &&
+                         (e.BarbeiroId == null || e.BarbeiroId == request.BarbeiroId));
+
+            if (existeExcecao)
+            {
+                var excecao = _contexto.Excecao
+                    .FirstOrDefault(e => e.Excluido == 0 &&
+                                        e.Data.Date == dataAgendamento &&
+                                        (e.BarbeiroId == null || e.BarbeiroId == request.BarbeiroId));
+                throw new Exception($"Não é possível agendar nesta data. Motivo: {excecao?.Descricao}");
+            }
+
+            var barbeiro = _contexto.Usuario.Find(request.BarbeiroId) ?? throw new Exception("Barbeiro não encontrado.");
+
+            var usuarioLogado = _contexto.Usuario.Find(request.UsuarioId);
+
+            if (usuarioLogado != null)
+            {
+                request.Numero = usuarioLogado.Numero;
+                request.Nome = usuarioLogado.Nome;
+            }
+
+            var agendamento = new Agendamento(request);
+
+            var dataInicio = DateTime.SpecifyKind(
+                            request.DtAgendamento,
+                            DateTimeKind.Unspecified);
+            var tempoTotal = _contexto.Servico.Find(request.ServicoId)!.TempoEstimado;
+
+            var dataFim = dataInicio;
+
+            if (tempoTotal.Hour > 0)
+                dataFim = dataFim.AddHours(tempoTotal.Hour);
+            if (tempoTotal.Minute > 0)
+                dataFim = dataFim.AddMinutes(tempoTotal.Minute);
+
+            var conflito = _contexto.Agendamento.Any(a =>
+                            a.BarbeiroId == request.BarbeiroId &&
+                            a.DataHora >= dataInicio &&
+                            a.DataHora < dataFim
+                            );
+
+            if (conflito)
+                throw new Exception("O barbeiro já possui um agendamento nesse horário. Por favor, escolha outro horário.");
+
+            agendamento.DataHora = DateTime.SpecifyKind(
+                                    agendamento.DataHora,
+                                    DateTimeKind.Unspecified
+                                );
+
+            _contexto.Agendamento.Add(agendamento);
+            _contexto.SaveChanges();
+
+
+            var ocuparMaisSlot = tempoTotal.Hour > 0 || tempoTotal.Minute > 40;
+
+            if (ocuparMaisSlot)
+            {
+                var agendamentoSlot = new Agendamento
+                {
+                    BarbeiroId = request.BarbeiroId,
+                    DataHora = DateTime.SpecifyKind(agendamento.DataHora.AddMinutes(40), DateTimeKind.Unspecified),
+                    Status = AgendamentoStatus.SlotReservado.ToString(),
+                    NomeCliente = $"Slot complementar do agendamento {agendamento.Id}",
+                    NumeroCliente = "00000000000"
+                };
+                _contexto.Agendamento.Add(agendamentoSlot);
+                _contexto.SaveChanges();
+            }
+        }
+
+        public List<HorariosOcupadosResponse> HorariosOcupadosBarbeiro(HorarioRequest request)
+        {
+            var agendamentos = _contexto.Agendamento
+                .Where(a => (a.BarbeiroId == request.IdBarbeiro && a.DataHora.Date == request.Data.Date) &&
+                           a.Status != AgendamentoStatus.CanceladoPeloCliente.ToString() ||
+                           a.Status != AgendamentoStatus.CanceladoPeloBarbeiro.ToString())
+                .OrderBy(a => a.DataHora)
+                .ToList();
+
+            var horariosOcupadosPorData = agendamentos
+                .GroupBy(a => a.DataHora.Date)
+                .Select(g => new HorariosOcupadosResponse
+                {
+                    Data = g.Key,
+                    Horarios = g.Select(a => a.DataHora.TimeOfDay).OrderBy(h => h)
+                })
+                .ToList();
+
+            return horariosOcupadosPorData;
+        }
+
+        public PaginacaoResultado<AgendamentoDetalheResponse> ListarAgendamentos(PaginacaoFiltro<AgendamentoFiltroRequest> request)
+        {
+            var query = _contexto.Agendamento
+                .Where(a => a.Status != AgendamentoStatus.SlotReservado.ToString())
+                .AsQueryable();
+
+            if (request.Filtro?.BarbeiroId != null)
+                query = query.Where(a => a.BarbeiroId == request.Filtro.BarbeiroId.Value);
+
+            if (request.Filtro?.DtAgendamento != null)
+            {
+                var dataInicio = request.Filtro.DtAgendamento.Value.Date;
+                var dataFim = dataInicio.AddDays(1);
+                query = query.Where(a => a.DataHora >= dataInicio && a.DataHora < dataFim);
+            }
+
+            if (request.Filtro?.Servicos != null && request.Filtro.Servicos.Any())
+            {
+                query = query.Where(a => a.ServicoId != null && request.Filtro.Servicos.Contains(a.ServicoId.Value));
+            }
+
+            var totalRegistros = query.Count();
+
+            var agendamentos = query
+                .OrderBy(a => a.DataHora)
+                .Skip((request.Pagina - 1) * request.ItensPorPagina)
+                .Take(request.ItensPorPagina)
+                .ToList();
+
+            var resultado = agendamentos.Select(a =>
+            {
+                var barbeiro = _contexto.Usuario.Find(a.BarbeiroId);
+                var servico = _contexto.Servico.Find(a.ServicoId);
+                return new AgendamentoDetalheResponse
+                {
+                    Id = a.Id,
+                    NomeCliente = a.NomeCliente,
+                    NomeBarbeiro = barbeiro?.Nome ?? "Barbeiro não encontrado",
+                    NumeroCliente = a.NumeroCliente,
+                    Status = a.Status,
+                    Data = a.DataHora,
+                    Servico = servico!.Descricao
+                };
+            }).ToList();
+
+            return new PaginacaoResultado<AgendamentoDetalheResponse>
+            {
+                Items = resultado,
+                TotalRegistros = totalRegistros,
+                PaginaAtual = request.Pagina,
+                ItensPorPagina = request.ItensPorPagina
+            };
+        }
+
+        public AgendamentoDetalheResponse ObterPorId(int id)
+        {
+            var agendamento = _contexto.Agendamento
+                .FirstOrDefault(a => a.Id == id) ?? throw new Exception("Agendamento não encontrado.");
+
+            var servicoAgendamento = _contexto.Servico.Find(agendamento.ServicoId) ?? throw new Exception("Serviço não encontrado.");
+
+            var barbeiro = _contexto.Usuario.Find(agendamento.BarbeiroId) ?? throw new Exception("Barbeiro não encontrado.");
+
+            return new AgendamentoDetalheResponse
+            {
+                Id = agendamento.Id,
+                NomeCliente = agendamento.NomeCliente,
+                NomeBarbeiro = barbeiro.Nome,
+                NumeroCliente = agendamento.NumeroCliente,
+                Status = agendamento.Status,
+                Data = agendamento.DataHora,
+                Servico = servicoAgendamento.Descricao
+            };
+        }
+
+        public void GerarToken(string numero)
+        {
+            var tokenAtivo = _contexto.CodigoConfirmacao
+                .FirstOrDefault(t => t.Numero == numero && !t.Confirmado && t.DtExpiracao.ToUniversalTime() > DateTime.UtcNow);
+
+            var ultimoAgendamento = _contexto.Agendamento
+                .Where(x => x.NumeroCliente == numero && x.Status == AgendamentoStatus.Concluido.ToString())
+                .OrderByDescending(x => x.DataHora)
+                .FirstOrDefault();
+
+            if (ultimoAgendamento != null && ultimoAgendamento.DataHora.AddDays(7) >= DateTime.UtcNow)
+                throw new Exception("Seu ultimo corte foi a menos de 7 dias");
+
+            if (tokenAtivo != null && tokenAtivo.Reenviado)
+                throw new Exception("Já foi enviado um código de confirmação. Por favor, verifique seu telefone.");
+
+            if (tokenAtivo != null && !tokenAtivo.Reenviado)
+            {
+                HelperGenerico.EnviarMensagem(tokenAtivo.Codigo.ToString(), numero);
+                tokenAtivo.Reenviado = true;
+                _contexto.SaveChanges();
+                return;
+            }
+
+            var codigo = HelperGenerico.GerarCodigoConfirmacao();
+            var salvarToken = new CodigoConfirmacao(numero, codigo);
+
+            _contexto.CodigoConfirmacao.Add(salvarToken);
+            _contexto.SaveChanges();
+            HelperGenerico.EnviarMensagem(codigo.ToString(), numero);
+        }
+    }
+}
