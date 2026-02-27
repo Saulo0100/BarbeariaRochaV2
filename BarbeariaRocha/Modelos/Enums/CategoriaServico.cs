@@ -2,8 +2,8 @@
 {
     public enum CategoriaServico
     {
-        Cabelo = 0,
-        Barba = 1,
-        Sobrancelha = 2
+        Cabelo = 1,
+        Barba = 2,
+        Sobrancelha = 3
     }
 }

@@ -1,6 +1,7 @@
 using BarbeariaRocha.Aplicacao.Contratos;
 using BarbeariaRocha.Modelos.Paginacao;
 using BarbeariaRocha.Modelos.Request.Excecao;
+using BarbeariaRocha.Modelos.Response.Excecao;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BarbeariaRocha.Controllers
@@ -32,18 +33,19 @@ namespace BarbeariaRocha.Controllers
             return Ok(excecao);
         }
 
-        [HttpPost("listar")]
-        public IActionResult ListarExcecoes([FromBody] PaginacaoFiltro<ExcecaoFiltroRequest> filtro)
+        [HttpGet("listar")]
+        public IActionResult ListarExcecoes([FromQuery] PaginacaoFiltro<ExcecaoFiltroRequest> filtro)
         {
             var resultado = _excecaoApp.ListarExcecoes(filtro);
             return Ok(resultado);
         }
-
-        [HttpGet("verificar-disponibilidade")]
-        public IActionResult VerificarDisponibilidade([FromQuery] DateTime data, [FromQuery] int? barbeiroId)
+        [HttpGet("Barbeiro/{id}")]
+        public ActionResult<IEnumerable<ExcecaoDetalhesResponse>> ObterExcecaoBarbeiro(int id)
         {
-            var disponivel = _excecaoApp.VerificarDisponibilidade(data, barbeiroId);
-            return Ok(new { disponivel, data, barbeiroId });
+            var excecao = _excecaoApp.ObterPorBarbeiro(id);
+            if (excecao == null)
+                return NotFound();
+            return Ok(excecao);
         }
     }
 }

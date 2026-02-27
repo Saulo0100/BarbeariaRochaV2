@@ -1,8 +1,10 @@
 ﻿using BarbeariaRocha.Aplicacao.Contratos;
 using BarbeariaRocha.Infraestrutura.Contexto;
 using BarbeariaRocha.Modelos.Entidades;
+using BarbeariaRocha.Modelos.Enums;
 using BarbeariaRocha.Modelos.Paginacao;
 using BarbeariaRocha.Modelos.Request.Usuario;
+using BarbeariaRocha.Modelos.Response.Barbeiro;
 using BarbeariaRocha.Modelos.Response.Usuario;
 
 namespace BarbeariaRocha.Aplicacao.Servicos
@@ -51,6 +53,18 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             var usuario = _contexto.Usuario.Find(id) ?? throw new Exception();
             usuario.Excluido = 1;
             _contexto.SaveChanges();
+        }
+
+        public IEnumerable<BarbeirosDetalhesResponse> ObterBarbeiros()
+        {
+            var barbeiros = _contexto.Usuario.Where(u => u.Perfil == Perfil.Barbeiro.ToString() && u.Excluido == 0).ToList();
+            return barbeiros.Select(b => new BarbeirosDetalhesResponse
+            {
+                Id = b.Id,
+                Nome = b.Nome,
+                Descricao = b.Descricao,
+                Agenda = b.Agenda!
+            });
         }
 
         public UsuarioDetalhesResponse ObterPorId(int id)

@@ -3,6 +3,7 @@ using BarbeariaRocha.Aplicacao.Servicos;
 using BarbeariaRocha.Configurations;
 using BarbeariaRocha.Infraestrutura;
 using BarbeariaRocha.Infraestrutura.Contexto;
+using BarbeariaRocha.Infraestrutura.Middlewares;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -35,6 +36,10 @@ builder.Services.AddScoped<IAgendamentoApp, AgendamentoApp>();
 builder.Services.AddScoped<IAutenticacaoApp, AutenticacaoApp>();
 builder.Services.AddScoped<IUsuarioApp, UsuarioApp>();
 builder.Services.AddScoped<IServicoApp, ServicoApp>();
+builder.Services.AddScoped<ITokenApp, TokenApp>();
+builder.Services.AddScoped<IExcecaoApp, ExcecaoApp>();
+builder.Services.AddScoped<IMensalistaApp, MensalistaApp>();
+builder.Services.AddScoped<ITestesApp, TestesApp>();
 builder.Services.AddSingleton<TokenProvider>();
 
 // -------------------- JWT --------------------
@@ -94,6 +99,10 @@ builder.Services.AddHangfireServer();
 // -------------------- BUILD --------------------
 
 var app = builder.Build();
+
+// -------------------- MIDDLEWARE --------------------
+
+app.UseMiddleware<ExceptionMiddleware>();
 
 // -------------------- PIPELINE --------------------
 

@@ -18,6 +18,10 @@ public class UsuarioMap : IEntityTypeConfiguration<Usuario>
             .IsRequired()
             .HasMaxLength(11);
 
+        builder.HasIndex(x => x.Numero)
+        .IsUnique()
+        .HasFilter("\"Excluido\" = false");
+
         builder.Property(x => x.Email)
             .HasMaxLength(50);
 
@@ -26,5 +30,7 @@ public class UsuarioMap : IEntityTypeConfiguration<Usuario>
 
         builder.Property(x => x.Perfil)
             .IsRequired();
+
+
     }
 }

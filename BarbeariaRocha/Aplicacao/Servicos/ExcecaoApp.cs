@@ -115,16 +115,34 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             };
         }
 
-        public bool VerificarDisponibilidade(DateTime data, int? barbeiroId)
+        public IEnumerable<ExcecaoDetalhesResponse> ObterPorBarbeiro(int barbeiroId)
         {
-            var dataConsulta = data.Date;
+            var excecoes = _contexto.Excecao
+                .Where(e => e.Excluido == 0
+                            && e.BarbeiroId == barbeiroId
+                            && e.Data.Date >= DateTime.Today)
+                .ToList();
 
-            var excecaoExiste = _contexto.Excecao
-                .Any(e => e.Excluido == 0 &&
-                         e.Data.Date == dataConsulta &&
-                         (e.BarbeiroId == null || e.BarbeiroId == barbeiroId));
+            var resultado = excecoes.Select(e =>
+            {
+                string? nomeBarbeiro = null;
+                if (e.BarbeiroId.HasValue)
+                {
+                    var barbeiro = _contexto.Usuario.Find(e.BarbeiroId.Value);
+                    nomeBarbeiro = barbeiro?.Nome;
+                }
 
-            return !excecaoExiste;
+                return new ExcecaoDetalhesResponse
+                {
+                    Id = e.Id,
+                    Data = e.Data,
+                    Descricao = e.Descricao,
+                    BarbeiroId = e.BarbeiroId,
+                    NomeBarbeiro = nomeBarbeiro
+                };
+            }).ToList();
+
+            return resultado;
         }
     }
 }

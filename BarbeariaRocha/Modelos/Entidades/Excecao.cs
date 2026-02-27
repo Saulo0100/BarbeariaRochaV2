@@ -9,7 +9,7 @@ namespace BarbeariaRocha.Modelos.Entidades
         public required DateTime Data { get; set; }
         public required string Descricao { get; set; }
         public int? BarbeiroId { get; set; }
-        public int Excluido { get; set; }
+        public int Excluido { get; set; } = 0;
 
         public Excecao() { }
 

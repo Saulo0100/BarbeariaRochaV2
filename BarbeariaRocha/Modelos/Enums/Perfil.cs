@@ -2,8 +2,8 @@
 {
     public enum Perfil
     {
-        Usuario = 0,
-        Barbeiro = 1,
-        Administrador = 2
+        Usuario = 1,
+        Barbeiro = 2,
+        Administrador = 3
     }
 }

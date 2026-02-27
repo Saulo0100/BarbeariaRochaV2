@@ -10,6 +10,6 @@ namespace BarbeariaRocha.Aplicacao.Contratos
         void DeletarExcecao(int id);
         ExcecaoDetalhesResponse ObterPorId(int id);
         PaginacaoResultado<ExcecaoDetalhesResponse> ListarExcecoes(PaginacaoFiltro<ExcecaoFiltroRequest> filtro);
-        bool VerificarDisponibilidade(DateTime data, int? barbeiroId);
+        IEnumerable<ExcecaoDetalhesResponse> ObterPorBarbeiro(int barbeiroId);
     }
 }
