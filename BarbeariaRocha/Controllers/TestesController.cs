@@ -11,7 +11,19 @@ namespace BarbeariaRocha.Controllers
         [HttpPost("RecriarBanco")]
         public IActionResult RecriarBanco()
         {
-            _app.RecriarBanco();
+            _app.LimparEPopular();
+            return StatusCode(StatusCodes.Status201Created);
+        }
+        [HttpPost("LimparBanco")]
+        public IActionResult LimparBanco()
+        {
+            _app.LimparBanco();
+            return StatusCode(StatusCodes.Status201Created);
+        }
+        [HttpPost("PopularBanco")]
+        public IActionResult PopularBanco()
+        {
+            _app.PopularDadosIniciais();
             return StatusCode(StatusCodes.Status201Created);
         }
     }

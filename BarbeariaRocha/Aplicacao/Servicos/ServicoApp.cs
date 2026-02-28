@@ -18,8 +18,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 Descricao = request.Descricao,
                 Valor = request.Valor,
                 TempoEstimado = TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(request.TempoEstimado)),
-                Categoria = request.Categoria,
-                Excluido = 0
+                Categoria = request.Categoria.ToString()
             };
 
             _contexto.Servico.Add(servico);
@@ -29,7 +28,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         public void DeletarServico(int id)
         {
             var servico = _contexto.Servico.Find(id) ?? throw new Exception("Serviço não encontrado.");
-            servico.Excluido = 1;
+            servico.Excluido = true;
             _contexto.SaveChanges();
         }
 
@@ -39,7 +38,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 throw new ArgumentNullException(nameof(filtro));
 
             var query = _contexto.Servico
-                .Where(s => s.Excluido == 0);
+                .Where(s => s.Excluido == false);
 
             if (filtro.Filtro != null)
             {

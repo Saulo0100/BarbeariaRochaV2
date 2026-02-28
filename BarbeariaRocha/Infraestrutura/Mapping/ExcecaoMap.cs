@@ -13,8 +13,8 @@ namespace BarbeariaRocha.Infraestrutura.Mapping
             builder.HasKey(x => x.Id);
 
             builder.Property(x => x.Data)
-                .IsRequired();
-
+                .IsRequired()
+                .HasColumnType("date");
             builder.Property(x => x.Descricao)
                 .IsRequired()
                 .HasMaxLength(200);

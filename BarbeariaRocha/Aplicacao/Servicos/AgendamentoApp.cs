@@ -59,9 +59,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             _contexto.SaveChanges();
         }
 
-        public void CompletarAgendamento(AgendamentoCompletarRequest request)
+        public void CompletarAgendamento(int id, AgendamentoCompletarRequest request)
         {
-            var agendamento = _contexto.Agendamento.Find(request.Id) ?? throw new Exception("Agendamento não encontrado.");
+            var agendamento = _contexto.Agendamento.Find(id) ?? throw new Exception("Agendamento não encontrado.");
             agendamento.Status = AgendamentoStatus.Concluido.ToString();
             agendamento.MetodoPagamento = request.MetodoPagamento.ToString();
             _contexto.SaveChanges();
@@ -83,14 +83,14 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             // Verificar se existe exceção para essa data
             var dataAgendamento = request.DtAgendamento.Date;
             var existeExcecao = _contexto.Excecao
-                .Any(e => e.Excluido == 0 &&
+                .Any(e => e.Excluido == false &&
                          e.Data.Date == dataAgendamento &&
                          (e.BarbeiroId == null || e.BarbeiroId == request.BarbeiroId));
 
             if (existeExcecao)
             {
                 var excecao = _contexto.Excecao
-                    .FirstOrDefault(e => e.Excluido == 0 &&
+                    .FirstOrDefault(e => e.Excluido == false &&
                                         e.Data.Date == dataAgendamento &&
                                         (e.BarbeiroId == null || e.BarbeiroId == request.BarbeiroId));
                 throw new Exception($"Não é possível agendar nesta data. Motivo: {excecao?.Descricao}");

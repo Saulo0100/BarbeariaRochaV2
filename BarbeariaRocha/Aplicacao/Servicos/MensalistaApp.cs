@@ -1,8 +1,10 @@
 ﻿using BarbeariaRocha.Aplicacao.Contratos;
 using BarbeariaRocha.Infraestrutura.Contexto;
 using BarbeariaRocha.Modelos.Entidades;
+using BarbeariaRocha.Modelos.Enums;
 using BarbeariaRocha.Modelos.Request.Mensalista;
 using BarbeariaRocha.Modelos.Response.Mensalista;
+using System.Globalization;
 
 namespace BarbeariaRocha.Aplicacao.Servicos
 {
@@ -24,15 +26,19 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             {
                 Usuario.ValidarNumero(request.Numero);
             }
+            var dia = CultureInfo
+                    .GetCultureInfo("pt-BR")
+                    .DateTimeFormat
+                    .GetDayName(request.Dia);
 
             var mensalista = new Mensalista
             {
                 Nome = request.Nome,
                 Numero = request.Numero,
                 Valor = request.Valor,
-                Dia = request.Dia,
-                Tipo = request.Tipo,
-                Status = request.Status
+                Dia = dia,
+                Tipo = request.Tipo.ToString(),
+                Status = MensalistaStatus.Ativo.ToString()
             };
 
             _contexto.Mensalista.Add(mensalista);
@@ -76,14 +82,12 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             if (request.Valor <= 0)
                 throw new ArgumentException("O valor deve ser maior que zero.", nameof(request.Valor));
 
-            if (string.IsNullOrWhiteSpace(request.Dia))
+            if (!Enum.IsDefined(typeof(DayOfWeek), request.Dia))
                 throw new ArgumentException("O dia é obrigatório.", nameof(request.Dia));
 
-            if (string.IsNullOrWhiteSpace(request.Tipo))
+            if (!Enum.IsDefined(typeof(MensalistaTipo), request.Tipo))
                 throw new ArgumentException("O tipo é obrigatório.", nameof(request.Tipo));
 
-            if (string.IsNullOrWhiteSpace(request.Status))
-                throw new ArgumentException("O status é obrigatório.", nameof(request.Status));
         }
     }
 }

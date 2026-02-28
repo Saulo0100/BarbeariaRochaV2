@@ -114,17 +114,17 @@ namespace BarbeariaRocha.Migrations
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("Data")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("date");
 
                     b.Property<string>("Descricao")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<int>("Excluido")
+                    b.Property<bool>("Excluido")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0);
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.HasKey("Id");
 
@@ -143,8 +143,11 @@ namespace BarbeariaRocha.Migrations
 
                     b.Property<string>("Dia")
                         .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)");
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<bool>("Excluido")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Nome")
                         .IsRequired()
@@ -171,6 +174,10 @@ namespace BarbeariaRocha.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Numero")
+                        .IsUnique()
+                        .HasFilter("\"Status\" = 'Ativo'");
+
                     b.ToTable("Mensalistas", (string)null);
                 });
 
@@ -191,8 +198,8 @@ namespace BarbeariaRocha.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<int>("Excluido")
-                        .HasColumnType("integer");
+                    b.Property<bool>("Excluido")
+                        .HasColumnType("boolean");
 
                     b.Property<TimeSpan>("TempoEstimado")
                         .HasColumnType("interval");
@@ -224,8 +231,8 @@ namespace BarbeariaRocha.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<int>("Excluido")
-                        .HasColumnType("integer");
+                    b.Property<bool>("Excluido")
+                        .HasColumnType("boolean");
 
                     b.Property<byte[]>("Foto")
                         .HasColumnType("bytea");
@@ -249,6 +256,10 @@ namespace BarbeariaRocha.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Numero")
+                        .IsUnique()
+                        .HasFilter("\"Excluido\" = false");
 
                     b.ToTable("Usuarios", (string)null);
                 });

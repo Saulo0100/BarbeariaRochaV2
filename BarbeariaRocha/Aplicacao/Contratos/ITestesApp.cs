@@ -2,6 +2,8 @@
 {
     public interface ITestesApp
     {
-        void RecriarBanco();
+        void LimparEPopular();
+        void PopularDadosIniciais();
+        void LimparBanco();
     }
 }

@@ -65,9 +65,9 @@ namespace BarbeariaRocha.Controllers
         // PATCH: api/agendamento/{id}/Completar
         [Authorize]
         [HttpPatch("{id}/Completar")]
-        public IActionResult Completar([FromBody] AgendamentoCompletarRequest request)
+        public IActionResult Completar(int id, [FromBody] AgendamentoCompletarRequest request)
         {
-            _app.CompletarAgendamento(request);
+            _app.CompletarAgendamento(id, request);
             return NoContent();
         }
 

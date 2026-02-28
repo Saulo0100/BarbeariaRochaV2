@@ -9,6 +9,6 @@
         public required string Dia { get; set; }
         public required string Tipo { get; set; }
         public required string Status { get; set; }
-        public int Excluido { get; set; } = 0;
+        public bool Excluido { get; set; } = false;
     }
 }

@@ -42,8 +42,8 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             if (!string.IsNullOrWhiteSpace(request.Descricao))
                 usuario.Descricao = request.Descricao;
 
-            if (!string.IsNullOrWhiteSpace(request.Agenda))
-                usuario.Agenda = request.Agenda;
+            if (!string.IsNullOrWhiteSpace(request.Agenda?.ToString()))
+                usuario.Agenda = request.Agenda?.ToString();
 
             _contexto.SaveChanges();
         }
@@ -51,13 +51,13 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         public void Excluir(int id)
         {
             var usuario = _contexto.Usuario.Find(id) ?? throw new Exception();
-            usuario.Excluido = 1;
+            usuario.Excluido = true;
             _contexto.SaveChanges();
         }
 
         public IEnumerable<BarbeirosDetalhesResponse> ObterBarbeiros()
         {
-            var barbeiros = _contexto.Usuario.Where(u => u.Perfil == Perfil.Barbeiro.ToString() && u.Excluido == 0).ToList();
+            var barbeiros = _contexto.Usuario.Where(u => u.Perfil == Perfil.Barbeiro.ToString() && !u.Excluido).ToList();
             return barbeiros.Select(b => new BarbeirosDetalhesResponse
             {
                 Id = b.Id,
@@ -86,7 +86,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public PaginacaoResultado<UsuarioDetalhesResponse> ObterTodos(PaginacaoFiltro<UsuarioFiltroRequest> filtro)
         {
-            var query = _contexto.Usuario.Where(u => u.Excluido == 0).AsQueryable();
+            var query = _contexto.Usuario.Where(u => !u.Excluido).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(filtro.Filtro?.Nome))
                 query = query.Where(u => u.Nome.Contains(filtro.Filtro.Nome));

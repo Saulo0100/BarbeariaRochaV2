@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BarbeariaRocha.Migrations
 {
     [DbContext(typeof(Contexto))]
-    [Migration("20260226005317_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260228174128_InitialCreateee")]
+    partial class InitialCreateee
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -52,7 +52,7 @@ namespace BarbeariaRocha.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
-                    b.Property<int>("ServicoId")
+                    b.Property<int?>("ServicoId")
                         .HasColumnType("integer");
 
                     b.Property<string>("Status")
@@ -105,6 +105,85 @@ namespace BarbeariaRocha.Migrations
                     b.ToTable("CodigoConfirmacao");
                 });
 
+            modelBuilder.Entity("BarbeariaRocha.Modelos.Entidades.Excecao", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("BarbeiroId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("Data")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Descricao")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("Excluido")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BarbeiroId");
+
+                    b.ToTable("Excecoes", (string)null);
+                });
+
+            modelBuilder.Entity("BarbeariaRocha.Modelos.Entidades.Mensalista", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Dia")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<bool>("Excluido")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Numero")
+                        .IsRequired()
+                        .HasMaxLength(11)
+                        .HasColumnType("character varying(11)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<decimal>("Valor")
+                        .HasColumnType("numeric");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Numero")
+                        .IsUnique()
+                        .HasFilter("\"Status\" = 'Ativo'");
+
+                    b.ToTable("Mensalistas", (string)null);
+                });
+
             modelBuilder.Entity("BarbeariaRocha.Modelos.Entidades.Servico", b =>
                 {
                     b.Property<int>("Id")
@@ -122,8 +201,8 @@ namespace BarbeariaRocha.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<int>("Excluido")
-                        .HasColumnType("integer");
+                    b.Property<bool>("Excluido")
+                        .HasColumnType("boolean");
 
                     b.Property<TimeSpan>("TempoEstimado")
                         .HasColumnType("interval");
@@ -155,8 +234,8 @@ namespace BarbeariaRocha.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<int>("Excluido")
-                        .HasColumnType("integer");
+                    b.Property<bool>("Excluido")
+                        .HasColumnType("boolean");
 
                     b.Property<byte[]>("Foto")
                         .HasColumnType("bytea");
@@ -181,6 +260,10 @@ namespace BarbeariaRocha.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Numero")
+                        .IsUnique()
+                        .HasFilter("\"Excluido\" = false");
+
                     b.ToTable("Usuarios", (string)null);
                 });
 
@@ -195,12 +278,19 @@ namespace BarbeariaRocha.Migrations
                     b.HasOne("BarbeariaRocha.Modelos.Entidades.Servico", null)
                         .WithMany()
                         .HasForeignKey("ServicoId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("BarbeariaRocha.Modelos.Entidades.Usuario", null)
                         .WithMany()
                         .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("BarbeariaRocha.Modelos.Entidades.Excecao", b =>
+                {
+                    b.HasOne("BarbeariaRocha.Modelos.Entidades.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("BarbeiroId")
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 #pragma warning restore 612, 618

@@ -9,7 +9,7 @@ namespace BarbeariaRocha.Modelos.Entidades
         public required DateTime Data { get; set; }
         public required string Descricao { get; set; }
         public int? BarbeiroId { get; set; }
-        public int Excluido { get; set; } = 0;
+        public bool Excluido { get; set; } = false;
 
         public Excecao() { }
 
@@ -22,7 +22,7 @@ namespace BarbeariaRocha.Modelos.Entidades
             Data = request.Data;
             Descricao = request.Descricao;
             BarbeiroId = request.BarbeiroId;
-            Excluido = 0;
+            Excluido = false;
         }
 
         private static void ValidarData(DateTime data)

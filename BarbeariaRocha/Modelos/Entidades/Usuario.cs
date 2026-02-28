@@ -15,7 +15,7 @@ namespace BarbeariaRocha.Modelos.Entidades
         public required string Perfil { get; set; }
         public required string Senha { get; set; }
         public string? Agenda { get; set; }
-        public int Excluido { get; set; } = 0;
+        public bool Excluido { get; set; } = false;
 
         public Usuario() { }
         [SetsRequiredMembers]
@@ -29,9 +29,9 @@ namespace BarbeariaRocha.Modelos.Entidades
             Descricao = request.Descricao;
             Numero = request.Numero;
             Email = request.Email;
-            Perfil = request.Perfil;
+            Perfil = request.Perfil.ToString();
             Senha = request.Senha;
-            Agenda = request.Agenda;
+            Agenda = request.Agenda?.ToString();
         }
 
         public static void ValidarNumero(string numero)

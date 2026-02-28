@@ -25,7 +25,7 @@ namespace BarbeariaRocha.Aplicacao.Contratos
         PaginacaoResultado<AgendamentoDetalheResponse> ListarAgendamentos(PaginacaoFiltro<AgendamentoFiltroRequest> request);
 
         // Completar agendamento
-        void CompletarAgendamento(AgendamentoCompletarRequest request);
+        void CompletarAgendamento(int id, AgendamentoCompletarRequest request);
 
         // Cancelar agendamento
         void CancelarAgendamento(int id);

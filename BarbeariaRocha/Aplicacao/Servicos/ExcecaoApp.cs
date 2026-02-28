@@ -16,9 +16,19 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             if (request.BarbeiroId.HasValue)
             {
                 var barbeiro = _contexto.Usuario.Find(request.BarbeiroId.Value);
-                if (barbeiro == null || barbeiro.Excluido == 1)
+                if (barbeiro == null || barbeiro.Excluido)
                     throw new Exception("Barbeiro não encontrado.");
+
+                var excecaoExistente = _contexto.Excecao
+                                        .Where(x => x.BarbeiroId == request.BarbeiroId.Value
+                                        && x.Data.Date == request.Data.Date)
+                                        .FirstOrDefault();
+                if (excecaoExistente != null)
+                    throw new Exception("Já existe uma exceção para esse dia e barbeiro cadastradas.");
+
             }
+
+
 
             var excecao = new Excecao(request);
             _contexto.Excecao.Add(excecao);
@@ -28,7 +38,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         public void DeletarExcecao(int id)
         {
             var excecao = _contexto.Excecao.Find(id) ?? throw new Exception("Exceção não encontrada.");
-            excecao.Excluido = 1;
+            excecao.Excluido = true;
             _contexto.SaveChanges();
         }
 
@@ -36,7 +46,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         {
             var excecao = _contexto.Excecao.Find(id) ?? throw new Exception("Exceção não encontrada.");
 
-            if (excecao.Excluido == 1)
+            if (excecao.Excluido)
                 throw new Exception("Exceção não encontrada.");
 
             string? nomeBarbeiro = null;
@@ -59,24 +69,27 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         public PaginacaoResultado<ExcecaoDetalhesResponse> ListarExcecoes(PaginacaoFiltro<ExcecaoFiltroRequest> filtro)
         {
             var query = _contexto.Excecao
-                .Where(e => e.Excluido == 0)
+                .Where(e => e.Excluido == false)
                 .AsQueryable();
 
-            if (filtro.Filtro.DataInicio.HasValue)
+            if (filtro.Filtro != null)
             {
-                var dataInicio = filtro.Filtro.DataInicio.Value.Date;
-                query = query.Where(e => e.Data.Date >= dataInicio);
-            }
+                if (filtro.Filtro.DataInicio.HasValue)
+                {
+                    var dataInicio = filtro.Filtro.DataInicio.Value.Date;
+                    query = query.Where(e => e.Data.Date >= dataInicio);
+                }
 
-            if (filtro.Filtro.DataFim.HasValue)
-            {
-                var dataFim = filtro.Filtro.DataFim.Value.Date;
-                query = query.Where(e => e.Data.Date <= dataFim);
-            }
+                if (filtro.Filtro.DataFim.HasValue)
+                {
+                    var dataFim = filtro.Filtro.DataFim.Value.Date;
+                    query = query.Where(e => e.Data.Date <= dataFim);
+                }
 
-            if (filtro.Filtro.BarbeiroId.HasValue)
-            {
-                query = query.Where(e => e.BarbeiroId == filtro.Filtro.BarbeiroId.Value || e.BarbeiroId == null);
+                if (filtro.Filtro.BarbeiroId.HasValue)
+                {
+                    query = query.Where(e => e.BarbeiroId == filtro.Filtro.BarbeiroId.Value || e.BarbeiroId == null);
+                }
             }
 
             var totalRegistros = query.Count();
@@ -118,7 +131,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         public IEnumerable<ExcecaoDetalhesResponse> ObterPorBarbeiro(int barbeiroId)
         {
             var excecoes = _contexto.Excecao
-                .Where(e => e.Excluido == 0
+                .Where(e => e.Excluido == false
                             && e.BarbeiroId == barbeiroId
                             && e.Data.Date >= DateTime.Today)
                 .ToList();

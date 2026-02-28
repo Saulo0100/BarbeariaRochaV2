@@ -1,4 +1,6 @@
-﻿namespace BarbeariaRocha.Modelos.Request.Usuario
+﻿using BarbeariaRocha.Modelos.Enums;
+
+namespace BarbeariaRocha.Modelos.Request.Usuario
 {
     public class UsuarioEditarRequest
     {
@@ -7,6 +9,6 @@
         public string? Email { get; set; }
         public string? Numero { get; set; }
         public string? Descricao { get; set; }
-        public string? Agenda { get; set; }
+        public TipoAgenda? Agenda { get; set; }
     }
 }
