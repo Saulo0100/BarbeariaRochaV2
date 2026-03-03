@@ -29,5 +29,8 @@ namespace BarbeariaRocha.Aplicacao.Contratos
 
         // Cancelar agendamento
         void CancelarAgendamento(int id);
+
+        // Marcar cliente como faltou (no-show)
+        void MarcarClienteFaltou(int id);
     }
 }

@@ -51,10 +51,16 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 a.Status == AgendamentoStatus.CanceladoPeloCliente.ToString() ||
                 a.Status == AgendamentoStatus.CanceladoPeloBarbeiro.ToString()).Count();
 
+            var faltaram = query.Where(a =>
+                a.Status == AgendamentoStatus.ClienteFaltou.ToString()).Count();
+
             var pendentes = query.Where(a =>
                 a.Status == AgendamentoStatus.Pendente.ToString() ||
                 a.Status == AgendamentoStatus.Confirmado.ToString() ||
                 a.Status == AgendamentoStatus.LembreteEnviado.ToString()).Count();
+
+            // Total de agendamentos finalizados (concluidos + faltas + cancelamentos) para calcular taxas
+            var totalFinalizados = todosConcluidos.Count + cancelados + faltaram;
 
             return new RelatorioGeralResponse
             {
@@ -68,7 +74,11 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 FaturamentoMes = faturamentoMes,
                 TicketMedio = todosConcluidos.Count > 0 ? faturamentoTotal / todosConcluidos.Count : 0,
                 AgendamentosPendentes = pendentes,
-                CancelamentosTotal = cancelados
+                CancelamentosTotal = cancelados,
+                ClientesFaltaram = faltaram,
+                TaxaFaltas = totalFinalizados > 0 ? Math.Round((decimal)faltaram / totalFinalizados * 100, 2) : 0,
+                TaxaCancelamento = totalFinalizados > 0 ? Math.Round((decimal)cancelados / totalFinalizados * 100, 2) : 0,
+                TaxaConclusao = totalFinalizados > 0 ? Math.Round((decimal)todosConcluidos.Count / totalFinalizados * 100, 2) : 0
             };
         }
 
@@ -243,9 +253,13 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 var cancelados = agBarbeiro.Where(a =>
                     a.Status == AgendamentoStatus.CanceladoPeloCliente.ToString() ||
                     a.Status == AgendamentoStatus.CanceladoPeloBarbeiro.ToString()).Count();
+                var faltaram = agBarbeiro.Where(a =>
+                    a.Status == AgendamentoStatus.ClienteFaltou.ToString()).Count();
 
                 var faturamento = concluidos.Sum(a =>
                     a.ServicoId.HasValue ? (_contexto.Servico.Find(a.ServicoId.Value)?.Valor ?? 0) : 0);
+
+                var totalFinalizados = concluidos.Count + cancelados + faltaram;
 
                 return new RelatorioBarbeiroResponse
                 {
@@ -254,7 +268,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                     TotalCortes = concluidos.Count,
                     Faturamento = faturamento,
                     TicketMedio = concluidos.Count > 0 ? faturamento / concluidos.Count : 0,
-                    CancelamentosTotal = cancelados
+                    CancelamentosTotal = cancelados,
+                    ClientesFaltaram = faltaram,
+                    TaxaConclusao = totalFinalizados > 0 ? Math.Round((decimal)concluidos.Count / totalFinalizados * 100, 2) : 0
                 };
             }).OrderByDescending(r => r.TotalCortes).ToList();
 

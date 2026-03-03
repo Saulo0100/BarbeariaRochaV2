@@ -13,5 +13,9 @@ namespace BarbeariaRocha.Modelos.Response.Relatorio
         public decimal TicketMedio { get; set; }
         public int AgendamentosPendentes { get; set; }
         public int CancelamentosTotal { get; set; }
+        public int ClientesFaltaram { get; set; }
+        public decimal TaxaFaltas { get; set; }
+        public decimal TaxaCancelamento { get; set; }
+        public decimal TaxaConclusao { get; set; }
     }
 }
