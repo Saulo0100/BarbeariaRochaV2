@@ -9,6 +9,7 @@
         CanceladoPeloBarbeiro = 5,
         Confirmado = 6,
         VouAtrasar = 7,
-        SlotReservado = 8
+        SlotReservado = 8,
+        ClienteFaltou = 9
     }
 }

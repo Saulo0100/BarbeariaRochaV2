@@ -19,7 +19,8 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 .Where(a => a.BarbeiroId == barbeiroId &&
                            a.Status != AgendamentoStatus.Concluido.ToString() &&
                            a.Status != AgendamentoStatus.CanceladoPeloCliente.ToString() &&
-                           a.Status != AgendamentoStatus.CanceladoPeloBarbeiro.ToString())
+                           a.Status != AgendamentoStatus.CanceladoPeloBarbeiro.ToString() &&
+                           a.Status != AgendamentoStatus.ClienteFaltou.ToString())
                 .OrderBy(a => a.DataHora)
                 .FirstOrDefault() ?? throw new Exception("Nenhum agendamento ativo encontrado.");
 
@@ -56,6 +57,13 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         {
             var agendamento = _contexto.Agendamento.Find(id) ?? throw new Exception("Agendamento não encontrado.");
             agendamento.Status = AgendamentoStatus.CanceladoPeloBarbeiro.ToString();
+            _contexto.SaveChanges();
+        }
+
+        public void MarcarClienteFaltou(int id)
+        {
+            var agendamento = _contexto.Agendamento.Find(id) ?? throw new Exception("Agendamento não encontrado.");
+            agendamento.Status = AgendamentoStatus.ClienteFaltou.ToString();
             _contexto.SaveChanges();
         }
 
