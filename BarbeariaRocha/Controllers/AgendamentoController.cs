@@ -102,7 +102,7 @@ namespace BarbeariaRocha.Controllers
                 // Cliente logado vê apenas seus próprios agendamentos
                 filtro.Filtro.UsuarioId = UserId();
             }
-            else if (filtro.Filtro.BarbeiroId == null)
+            else if (filtro.Filtro.BarbeiroId == null && !filtro.Filtro.TodosBarbeiros)
             {
                 // Barbeiro/Admin sem filtro específico vê seus próprios agendamentos
                 filtro.Filtro.BarbeiroId = UserId();

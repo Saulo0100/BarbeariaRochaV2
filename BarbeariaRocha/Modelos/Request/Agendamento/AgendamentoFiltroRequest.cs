@@ -6,5 +6,7 @@
         public int? UsuarioId { get; set; }
         public DateTime? DtAgendamento { get; set; }
         public IEnumerable<int>? Servicos { get; set; }
+        public string? Status { get; set; }
+        public bool TodosBarbeiros { get; set; } = false;
     }
 }

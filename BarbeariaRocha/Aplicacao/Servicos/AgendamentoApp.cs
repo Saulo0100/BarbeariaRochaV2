@@ -329,6 +329,11 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 query = query.Where(a => a.ServicoId != null && request.Filtro.Servicos.Contains(a.ServicoId.Value));
             }
 
+            if (!string.IsNullOrEmpty(request.Filtro?.Status))
+            {
+                query = query.Where(a => a.Status == request.Filtro.Status);
+            }
+
             var totalRegistros = query.Count();
 
             var agendamentos = query
