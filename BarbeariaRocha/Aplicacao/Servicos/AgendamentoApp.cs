@@ -314,6 +314,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             if (request.Filtro?.BarbeiroId != null)
                 query = query.Where(a => a.BarbeiroId == request.Filtro.BarbeiroId.Value);
 
+            if (request.Filtro?.UsuarioId != null)
+                query = query.Where(a => a.UsuarioId == request.Filtro.UsuarioId.Value);
+
             if (request.Filtro?.DtAgendamento != null)
             {
                 var dataInicio = request.Filtro.DtAgendamento.Value.Date;

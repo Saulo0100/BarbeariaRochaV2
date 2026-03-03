@@ -290,6 +290,11 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         {
             var minimoEtapa2 = etapa1Time.AddHours(intervaloMinimoHoras);
 
+            // Se o horário mínimo da etapa 2 ultrapassar meia-noite (overflow do TimeOnly),
+            // não há horário válido no mesmo dia para a etapa 2.
+            if (minimoEtapa2 <= etapa1Time)
+                return new List<TimeOnly>();
+
             var disponiveisEtapa2 = todosHorarios
                 .Where(h =>
                 {
