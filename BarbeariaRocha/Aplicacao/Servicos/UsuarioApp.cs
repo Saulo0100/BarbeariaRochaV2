@@ -57,7 +57,8 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public IEnumerable<BarbeirosDetalhesResponse> ObterBarbeiros()
         {
-            var barbeiros = _contexto.Usuario.Where(u => u.Perfil == Perfil.Barbeiro.ToString() && !u.Excluido).ToList();
+            var perfisBarbeiro = new[] { Perfil.Barbeiro.ToString(), Perfil.BarbeiroAdministrador.ToString() };
+            var barbeiros = _contexto.Usuario.Where(u => perfisBarbeiro.Contains(u.Perfil) && !u.Excluido).ToList();
             return barbeiros.Select(b => new BarbeirosDetalhesResponse
             {
                 Id = b.Id,
