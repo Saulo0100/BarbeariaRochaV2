@@ -15,6 +15,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         {
             var query = _contexto.Agendamento
                 .Where(a => a.Status != AgendamentoStatus.SlotReservado.ToString())
+                .Where(a => a.AgendamentoPrincipalId == null) // Excluir etapas secundárias (evita contar 2x)
                 .AsQueryable();
 
             if (filtro.BarbeiroId.HasValue)
@@ -86,6 +87,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         {
             var query = _contexto.Agendamento
                 .Where(a => a.Status == AgendamentoStatus.Concluido.ToString() && a.ServicoId.HasValue)
+                .Where(a => a.AgendamentoPrincipalId == null) // Excluir etapas secundárias
                 .AsQueryable();
 
             if (filtro.BarbeiroId.HasValue)
@@ -126,6 +128,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         {
             var query = _contexto.Agendamento
                 .Where(a => a.Status == AgendamentoStatus.Concluido.ToString())
+                .Where(a => a.AgendamentoPrincipalId == null) // Excluir etapas secundárias
                 .AsQueryable();
 
             if (filtro.BarbeiroId.HasValue)
@@ -165,6 +168,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         {
             var query = _contexto.Agendamento
                 .Where(a => a.Status == AgendamentoStatus.Concluido.ToString())
+                .Where(a => a.AgendamentoPrincipalId == null) // Excluir etapas secundárias
                 .AsQueryable();
 
             if (filtro.BarbeiroId.HasValue)
@@ -197,6 +201,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         {
             var query = _contexto.Agendamento
                 .Where(a => a.Status == AgendamentoStatus.Concluido.ToString() && a.MetodoPagamento != null)
+                .Where(a => a.AgendamentoPrincipalId == null) // Excluir etapas secundárias
                 .AsQueryable();
 
             if (filtro.BarbeiroId.HasValue)
@@ -231,6 +236,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         {
             var query = _contexto.Agendamento
                 .Where(a => a.Status != AgendamentoStatus.SlotReservado.ToString())
+                .Where(a => a.AgendamentoPrincipalId == null) // Excluir etapas secundárias
                 .AsQueryable();
 
             if (filtro.DataInicio.HasValue)

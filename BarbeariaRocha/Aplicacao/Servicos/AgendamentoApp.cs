@@ -20,11 +20,13 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                            a.Status != AgendamentoStatus.Concluido.ToString() &&
                            a.Status != AgendamentoStatus.CanceladoPeloCliente.ToString() &&
                            a.Status != AgendamentoStatus.CanceladoPeloBarbeiro.ToString() &&
-                           a.Status != AgendamentoStatus.ClienteFaltou.ToString())
+                           a.Status != AgendamentoStatus.ClienteFaltou.ToString() &&
+                           a.Status != AgendamentoStatus.SlotReservado.ToString())
                 .OrderBy(a => a.DataHora)
                 .FirstOrDefault() ?? throw new Exception("Nenhum agendamento ativo encontrado.");
 
             var barbeiro = _contexto.Usuario.Find(agendamento.BarbeiroId) ?? throw new Exception("Barbeiro não encontrado.");
+            var servico = agendamento.ServicoId.HasValue ? _contexto.Servico.Find(agendamento.ServicoId.Value) : null;
 
             return new AgendamentoDetalheResponse
             {
@@ -34,7 +36,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 NumeroCliente = agendamento.NumeroCliente,
                 Status = agendamento.Status,
                 Data = agendamento.DataHora,
-                Servico = _contexto.Servico.Find(agendamento.ServicoId)?.Descricao!
+                Servico = servico?.Descricao ?? "Serviço não encontrado",
+                DescricaoEtapa = agendamento.DescricaoEtapa,
+                AgendamentoPrincipalId = agendamento.AgendamentoPrincipalId
             };
         }
 
@@ -50,6 +54,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             agendamento.MetodoPagamento = request.MetodoPagamento.ToString();
             agendamento.Status = AgendamentoStatus.Concluido.ToString();
 
+            // Completar slots complementares associados
+            CompletarSlotsComplementares(id);
+
             _contexto.SaveChanges();
         }
 
@@ -57,6 +64,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         {
             var agendamento = _contexto.Agendamento.Find(id) ?? throw new Exception("Agendamento não encontrado.");
             agendamento.Status = AgendamentoStatus.CanceladoPeloBarbeiro.ToString();
+
+            // Cancelar slots complementares e etapas vinculadas
+            CancelarVinculados(id);
+
             _contexto.SaveChanges();
         }
 
@@ -64,6 +75,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         {
             var agendamento = _contexto.Agendamento.Find(id) ?? throw new Exception("Agendamento não encontrado.");
             agendamento.Status = AgendamentoStatus.ClienteFaltou.ToString();
+
+            // Marcar falta em slots complementares e etapas vinculadas
+            CancelarVinculados(id);
+
             _contexto.SaveChanges();
         }
 
@@ -72,6 +87,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             var agendamento = _contexto.Agendamento.Find(id) ?? throw new Exception("Agendamento não encontrado.");
             agendamento.Status = AgendamentoStatus.Concluido.ToString();
             agendamento.MetodoPagamento = request.MetodoPagamento.ToString();
+
+            // Completar slots complementares associados
+            CompletarSlotsComplementares(id);
+
             _contexto.SaveChanges();
         }
 
@@ -132,10 +151,15 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 if (diferencaHoras < servico.IntervaloMinimoHoras)
                     throw new Exception($"O intervalo entre as etapas deve ser de pelo menos {servico.IntervaloMinimoHoras} horas.");
 
+                // Para serviços com 2 etapas, cada etapa ocupa seus próprios slots.
+                // Se o tempo > 40min, cada etapa ocupa 2 slots consecutivos (validados pelo tempoTotal).
+                // Se o tempo <= 40min, cada etapa ocupa 1 slot (validado com tempo de 40min).
+                var tempoValidacao = tempoTotal;
+
                 // Verificar conflito etapa 1
-                ValidarConflito(request.BarbeiroId, dataEtapa1, tempoTotal);
+                ValidarConflito(request.BarbeiroId, dataEtapa1, tempoValidacao);
                 // Verificar conflito etapa 2
-                ValidarConflito(request.BarbeiroId, dataEtapa2, tempoTotal);
+                ValidarConflito(request.BarbeiroId, dataEtapa2, tempoValidacao);
 
                 // Criar agendamento etapa 1
                 var agendamentoEtapa1 = new Agendamento(request)
@@ -214,6 +238,28 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 throw new Exception("O barbeiro já possui um agendamento nesse horário. Por favor, escolha outro horário.");
         }
 
+        private void CompletarSlotsComplementares(int agendamentoId)
+        {
+            var slots = _contexto.Agendamento
+                .Where(a => a.AgendamentoPrincipalId == agendamentoId &&
+                           a.Status == AgendamentoStatus.SlotReservado.ToString())
+                .ToList();
+
+            foreach (var slot in slots)
+                slot.Status = AgendamentoStatus.Concluido.ToString();
+        }
+
+        private void CancelarVinculados(int agendamentoId)
+        {
+            var vinculados = _contexto.Agendamento
+                .Where(a => a.AgendamentoPrincipalId == agendamentoId &&
+                           a.Status != AgendamentoStatus.Concluido.ToString())
+                .ToList();
+
+            foreach (var v in vinculados)
+                v.Status = AgendamentoStatus.CanceladoPeloBarbeiro.ToString();
+        }
+
         private void CriarSlotComplementar(int barbeiroId, Agendamento agendamentoPrincipal)
         {
             var agendamentoSlot = new Agendamento
@@ -232,8 +278,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         public List<HorariosOcupadosResponse> HorariosOcupadosBarbeiro(HorarioRequest request)
         {
             var agendamentos = _contexto.Agendamento
-                .Where(a => (a.BarbeiroId == request.IdBarbeiro && a.DataHora.Date == request.Data.Date) &&
-                           a.Status != AgendamentoStatus.CanceladoPeloCliente.ToString() ||
+                .Where(a => a.BarbeiroId == request.IdBarbeiro &&
+                           a.DataHora.Date == request.Data.Date &&
+                           a.Status != AgendamentoStatus.CanceladoPeloCliente.ToString() &&
                            a.Status != AgendamentoStatus.CanceladoPeloBarbeiro.ToString())
                 .OrderBy(a => a.DataHora)
                 .ToList();
@@ -282,7 +329,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             var resultado = agendamentos.Select(a =>
             {
                 var barbeiro = _contexto.Usuario.Find(a.BarbeiroId);
-                var servico = _contexto.Servico.Find(a.ServicoId);
+                var servico = a.ServicoId.HasValue ? _contexto.Servico.Find(a.ServicoId.Value) : null;
                 return new AgendamentoDetalheResponse
                 {
                     Id = a.Id,
@@ -291,7 +338,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                     NumeroCliente = a.NumeroCliente,
                     Status = a.Status,
                     Data = a.DataHora,
-                    Servico = servico!.Descricao
+                    Servico = servico?.Descricao ?? "Serviço não encontrado",
+                    DescricaoEtapa = a.DescricaoEtapa,
+                    AgendamentoPrincipalId = a.AgendamentoPrincipalId
                 };
             }).ToList();
 
@@ -321,7 +370,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 NumeroCliente = agendamento.NumeroCliente,
                 Status = agendamento.Status,
                 Data = agendamento.DataHora,
-                Servico = servicoAgendamento.Descricao
+                Servico = servicoAgendamento.Descricao,
+                DescricaoEtapa = agendamento.DescricaoEtapa,
+                AgendamentoPrincipalId = agendamento.AgendamentoPrincipalId
             };
         }
 
