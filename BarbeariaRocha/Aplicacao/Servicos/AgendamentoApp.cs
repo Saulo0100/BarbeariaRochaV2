@@ -320,8 +320,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             if (request.Filtro?.DtAgendamento != null)
             {
                 var dataInicio = request.Filtro.DtAgendamento.Value.Date;
-                var dataFim = dataInicio.AddDays(1);
-                query = query.Where(a => a.DataHora >= dataInicio && a.DataHora < dataFim);
+                query = query.Where(a => a.DataHora >= dataInicio);
             }
 
             if (request.Filtro?.Servicos != null && request.Filtro.Servicos.Any())
