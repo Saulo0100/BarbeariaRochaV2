@@ -92,21 +92,42 @@ namespace BarbeariaRocha.Controllers
         // GET: api/agendamento
         [Authorize]
         [HttpGet]
-        public ActionResult<PaginacaoResultado<AgendamentoDetalheResponse>> Listar([FromQuery] PaginacaoFiltro<AgendamentoFiltroRequest> filtro)
+        public ActionResult<PaginacaoResultado<AgendamentoDetalheResponse>> Listar(
+            [FromQuery] int pagina = 1,
+            [FromQuery] int itensPorPagina = 10,
+            [FromQuery] int? barbeiroId = null,
+            [FromQuery] int? usuarioId = null,
+            [FromQuery] DateTime? dtAgendamento = null,
+            [FromQuery] string? status = null,
+            [FromQuery] bool todosBarbeiros = false)
         {
-            filtro.Filtro ??= new AgendamentoFiltroRequest();
+            var filtroRequest = new AgendamentoFiltroRequest
+            {
+                BarbeiroId = barbeiroId,
+                UsuarioId = usuarioId,
+                DtAgendamento = dtAgendamento,
+                Status = status,
+                TodosBarbeiros = todosBarbeiros
+            };
 
             var perfil = PerfilUsuario();
             if (perfil == "Cliente")
             {
                 // Cliente logado vê apenas seus próprios agendamentos
-                filtro.Filtro.UsuarioId = UserId();
+                filtroRequest.UsuarioId = UserId();
             }
-            else if (filtro.Filtro.BarbeiroId == null && !filtro.Filtro.TodosBarbeiros)
+            else if (filtroRequest.BarbeiroId == null && !filtroRequest.TodosBarbeiros)
             {
                 // Barbeiro/Admin sem filtro específico vê seus próprios agendamentos
-                filtro.Filtro.BarbeiroId = UserId();
+                filtroRequest.BarbeiroId = UserId();
             }
+
+            var filtro = new PaginacaoFiltro<AgendamentoFiltroRequest>
+            {
+                Pagina = pagina,
+                ItensPorPagina = itensPorPagina,
+                Filtro = filtroRequest
+            };
 
             var resultado = _app.ListarAgendamentos(filtro);
             return Ok(resultado);
