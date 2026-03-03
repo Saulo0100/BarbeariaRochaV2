@@ -2,10 +2,10 @@ namespace BarbeariaRocha.Modelos.Response.Relatorio
 {
     public class RelatorioGeralResponse
     {
-        public int TotalCortes { get; set; }
-        public int CortesHoje { get; set; }
-        public int CortesSemana { get; set; }
-        public int CortesMes { get; set; }
+        public int TotalAtendimentos { get; set; }
+        public int AtendimentosHoje { get; set; }
+        public int AtendimentosSemana { get; set; }
+        public int AtendimentosMes { get; set; }
         public decimal FaturamentoTotal { get; set; }
         public decimal FaturamentoHoje { get; set; }
         public decimal FaturamentoSemana { get; set; }
