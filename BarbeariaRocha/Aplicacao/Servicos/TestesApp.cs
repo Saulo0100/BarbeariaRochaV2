@@ -151,13 +151,17 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 Categoria = "Cabelo"
             };
 
-            var servico9 = new Servico //Esse serviço precisa ser feito em 2 horarios com diferença minima de 4 horas entre eles
+            var servico9 = new Servico
             {
                 Descricao = "Platinado com Corte",
                 Valor = 150.00m,
                 TempoEstimado = new TimeOnly(1, 20, 0),
                 Excluido = false,
-                Categoria = "Cabelo"
+                Categoria = "Cabelo",
+                RequerDuasEtapas = true,
+                IntervaloMinimoHoras = 4,
+                DescricaoEtapa1 = "Platinado",
+                DescricaoEtapa2 = "Corte"
             };
 
             var servico10 = new Servico
@@ -204,7 +208,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             //    Excluido = false,
             //    Categoria = "Cabelo"
             //};
-            _contexto.Servico.AddRange(servico1, servico2, servico3, servico4, servico5, servico6, servico7);
+            _contexto.Servico.AddRange(servico1, servico2, servico3, servico4, servico5, servico6, servico7, servico8, servico9, servico10, servico11, servico12);
             _contexto.SaveChanges();
 
             var amanha = DateTime.Today.AddDays(1);

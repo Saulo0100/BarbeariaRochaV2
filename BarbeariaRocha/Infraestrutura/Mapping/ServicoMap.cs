@@ -22,5 +22,19 @@ public class ServicoMap : IEntityTypeConfiguration<Servico>
             .HasConversion(
                 v => v.ToTimeSpan(),
                 v => TimeOnly.FromTimeSpan(v));
+
+        builder.Property(x => x.RequerDuasEtapas)
+            .HasDefaultValue(false);
+
+        builder.Property(x => x.IntervaloMinimoHoras)
+            .HasDefaultValue(0);
+
+        builder.Property(x => x.DescricaoEtapa1)
+            .HasMaxLength(100)
+            .IsRequired(false);
+
+        builder.Property(x => x.DescricaoEtapa2)
+            .HasMaxLength(100)
+            .IsRequired(false);
     }
 }
