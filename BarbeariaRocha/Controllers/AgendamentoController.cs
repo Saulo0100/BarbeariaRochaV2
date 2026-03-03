@@ -22,7 +22,7 @@ namespace BarbeariaRocha.Controllers
         }
 
         // POST: api/agendamento
-        [Authorize]
+        // Permite agendamento sem login (usuario anonimo)
         [HttpPost]
         public IActionResult Criar([FromBody] AgendamentoCriarRequest request)
         {
