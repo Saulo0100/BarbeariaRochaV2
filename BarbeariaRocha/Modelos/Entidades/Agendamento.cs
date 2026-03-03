@@ -16,6 +16,17 @@ namespace BarbeariaRocha.Modelos.Entidades
         public string? MetodoPagamento { get; set; }
         public DateTime DataHora { get; set; }
 
+        /// <summary>
+        /// Referência ao agendamento principal (para serviços com 2 etapas).
+        /// A etapa 2 aponta para a etapa 1.
+        /// </summary>
+        public int? AgendamentoPrincipalId { get; set; }
+
+        /// <summary>
+        /// Descrição da etapa (ex: "Platinado", "Corte"). Null para serviços normais.
+        /// </summary>
+        public string? DescricaoEtapa { get; set; }
+
         public Agendamento() { }
 
         [SetsRequiredMembers]

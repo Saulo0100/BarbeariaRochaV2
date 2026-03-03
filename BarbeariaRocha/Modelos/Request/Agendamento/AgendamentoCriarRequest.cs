@@ -9,5 +9,10 @@
         public required string Numero { get; set; }
         public required string Nome { get; set; }
         public required int CodigoConfirmacao { get; set; }
+
+        /// <summary>
+        /// Data/hora da segunda etapa (apenas para serviços com RequerDuasEtapas = true).
+        /// </summary>
+        public DateTime? DtAgendamentoEtapa2 { get; set; }
     }
 }

@@ -28,6 +28,13 @@ public class AgendamentoMap : IEntityTypeConfiguration<Agendamento>
         builder.Property(x => x.MetodoPagamento)
             .HasConversion<string>();
 
+        builder.Property(x => x.AgendamentoPrincipalId)
+            .IsRequired(false);
+
+        builder.Property(x => x.DescricaoEtapa)
+            .HasMaxLength(100)
+            .IsRequired(false);
+
         builder.HasOne<Servico>()
            .WithMany()
            .HasForeignKey(x => x.ServicoId)
@@ -42,5 +49,11 @@ public class AgendamentoMap : IEntityTypeConfiguration<Agendamento>
                .WithMany()
                .HasForeignKey(x => x.BarbeiroId)
                .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<Agendamento>()
+               .WithMany()
+               .HasForeignKey(x => x.AgendamentoPrincipalId)
+               .OnDelete(DeleteBehavior.Restrict)
+               .IsRequired(false);
     }
 }

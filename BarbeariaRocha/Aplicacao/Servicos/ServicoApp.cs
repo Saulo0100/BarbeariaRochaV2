@@ -63,7 +63,11 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                     Descricao = s.Descricao,
                     Valor = s.Valor,
                     TempoEstimado = s.TempoEstimado,
-                    Categoria = s.Categoria
+                    Categoria = s.Categoria,
+                    RequerDuasEtapas = s.RequerDuasEtapas,
+                    IntervaloMinimoHoras = s.IntervaloMinimoHoras,
+                    DescricaoEtapa1 = s.DescricaoEtapa1,
+                    DescricaoEtapa2 = s.DescricaoEtapa2
                 })
                 .ToList();
 
