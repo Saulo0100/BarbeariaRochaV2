@@ -94,8 +94,19 @@ namespace BarbeariaRocha.Controllers
         [HttpGet]
         public ActionResult<PaginacaoResultado<AgendamentoDetalheResponse>> Listar([FromQuery] PaginacaoFiltro<AgendamentoFiltroRequest> filtro)
         {
-            if (filtro.Filtro?.BarbeiroId == null)
-                filtro.Filtro?.BarbeiroId = UserId();
+            filtro.Filtro ??= new AgendamentoFiltroRequest();
+
+            var perfil = PerfilUsuario();
+            if (perfil == "Cliente")
+            {
+                // Cliente logado vê apenas seus próprios agendamentos
+                filtro.Filtro.UsuarioId = UserId();
+            }
+            else if (filtro.Filtro.BarbeiroId == null)
+            {
+                // Barbeiro/Admin sem filtro específico vê seus próprios agendamentos
+                filtro.Filtro.BarbeiroId = UserId();
+            }
 
             var resultado = _app.ListarAgendamentos(filtro);
             return Ok(resultado);
