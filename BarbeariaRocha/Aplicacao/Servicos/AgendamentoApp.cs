@@ -134,6 +134,14 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 request.Nome = usuarioLogado.Nome;
             }
 
+            var ultimoAgendamento = _contexto.Agendamento
+            .Where(x => x.NumeroCliente == request.Numero && x.Status == AgendamentoStatus.Concluido.ToString())
+            .OrderByDescending(x => x.DataHora)
+            .FirstOrDefault();
+
+            if (ultimoAgendamento != null && ultimoAgendamento.DataHora.AddDays(6) >= request.DtAgendamento)
+                throw new Exception("Seu ultimo corte foi a menos de 7 dias");
+
             var tempoTotal = servico.TempoEstimado;
             var ocuparMaisSlot = tempoTotal.Hour > 0 || tempoTotal.Minute > 40;
 
