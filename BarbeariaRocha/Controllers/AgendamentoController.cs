@@ -71,8 +71,9 @@ namespace BarbeariaRocha.Controllers
             return NoContent();
         }
 
-        // PATCH: api/agendamento/{id}/ClienteFaltou
+        // POST/PATCH: api/agendamento/{id}/ClienteFaltou
         [Authorize]
+        [HttpPost("{id}/ClienteFaltou")]
         [HttpPatch("{id}/ClienteFaltou")]
         public IActionResult MarcarClienteFaltou(int id)
         {
