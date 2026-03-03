@@ -65,10 +65,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
             return new RelatorioGeralResponse
             {
-                TotalCortes = todosConcluidos.Count,
-                CortesHoje = cortesHoje.Count,
-                CortesSemana = cortesSemana.Count,
-                CortesMes = cortesMes.Count,
+                TotalAtendimentos = todosConcluidos.Count,
+                AtendimentosHoje = cortesHoje.Count,
+                AtendimentosSemana = cortesSemana.Count,
+                AtendimentosMes = cortesMes.Count,
                 FaturamentoTotal = faturamentoTotal,
                 FaturamentoHoje = faturamentoHoje,
                 FaturamentoSemana = faturamentoSemana,
@@ -151,13 +151,13 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                     {
                         NomeCliente = ultimo.NomeCliente,
                         NumeroCliente = g.Key,
-                        TotalCortes = g.Count(),
-                        UltimoCorte = ultimo.DataHora,
+                        TotalAtendimentos = g.Count(),
+                        UltimoAtendimento = ultimo.DataHora,
                         TotalGasto = g.Sum(a =>
                             a.ServicoId.HasValue ? (_contexto.Servico.Find(a.ServicoId.Value)?.Valor ?? 0) : 0)
                     };
                 })
-                .OrderByDescending(c => c.TotalCortes)
+                .OrderByDescending(c => c.TotalAtendimentos)
                 .Take(top)
                 .ToList();
 
@@ -187,7 +187,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 .Select(g => new FaturamentoPorPeriodoResponse
                 {
                     Periodo = g.Key.ToString("dd/MM"),
-                    TotalCortes = g.Count(),
+                    TotalAtendimentos = g.Count(),
                     Faturamento = g.Sum(a =>
                         a.ServicoId.HasValue ? (_contexto.Servico.Find(a.ServicoId.Value)?.Valor ?? 0) : 0)
                 })
@@ -271,14 +271,14 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 {
                     BarbeiroId = b.Id,
                     NomeBarbeiro = b.Nome,
-                    TotalCortes = concluidos.Count,
+                    TotalAtendimentos = concluidos.Count,
                     Faturamento = faturamento,
                     TicketMedio = concluidos.Count > 0 ? faturamento / concluidos.Count : 0,
                     CancelamentosTotal = cancelados,
                     ClientesFaltaram = faltaram,
                     TaxaConclusao = totalFinalizados > 0 ? Math.Round((decimal)concluidos.Count / totalFinalizados * 100, 2) : 0
                 };
-            }).OrderByDescending(r => r.TotalCortes).ToList();
+            }).OrderByDescending(r => r.TotalAtendimentos).ToList();
 
             return resultado;
         }
