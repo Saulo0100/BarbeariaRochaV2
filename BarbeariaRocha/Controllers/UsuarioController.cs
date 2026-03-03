@@ -72,7 +72,7 @@ namespace BarbeariaRocha.Controllers
         }
 
         // GET: api/Usuarios/Barbeiro/Listar
-        [Authorize]
+        [AllowAnonymous]
         [HttpGet("/Barbeiro/Listar")]
         public ActionResult<BarbeirosDetalhesResponse> ObterBarbeiros()
         {
