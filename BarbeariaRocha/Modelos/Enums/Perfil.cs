@@ -4,6 +4,7 @@
     {
         Cliente = 1,
         Barbeiro = 2,
-        Administrador = 3
+        BarbeiroAdministrador = 3,
+        Administrador = 4
     }
 }
