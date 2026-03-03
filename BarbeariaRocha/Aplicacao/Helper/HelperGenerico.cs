@@ -13,21 +13,34 @@ namespace BarbeariaRocha.Aplicacao.Helper
         // Intervalo padrao entre slots (em minutos) - facil de alterar
         private const int IntervaloMinutos = 40;
 
-        // Segunda a Sexta
-        private static readonly TimeOnly SemanaInicio = TimeOnly.Parse("09:00");
-        private static readonly TimeOnly SemanaAlmocoInicio = TimeOnly.Parse("12:20");
+        // Segunda-feira (somente tarde)
+        private static readonly TimeOnly SegundaInicio = TimeOnly.Parse("13:20");
+        private static readonly TimeOnly SegundaFim = TimeOnly.Parse("20:00");
+
+        // Terça a Sexta
+        private static readonly TimeOnly SemanaInicio = TimeOnly.Parse("10:00");
+        private static readonly TimeOnly SemanaAlmocoInicio = TimeOnly.Parse("11:20");
         private static readonly TimeOnly SemanaAlmocoFim = TimeOnly.Parse("13:20");
         private static readonly TimeOnly SemanaFim = TimeOnly.Parse("20:00");
 
         // Sabado
-        private static readonly TimeOnly SabadoInicio = TimeOnly.Parse("10:00");
-        private static readonly TimeOnly SabadoAlmocoInicio = TimeOnly.Parse("12:00");
-        private static readonly TimeOnly SabadoAlmocoFim = TimeOnly.Parse("13:00");
-        private static readonly TimeOnly SabadoFim = TimeOnly.Parse("20:00");
+        private static readonly TimeOnly SabadoInicio = TimeOnly.Parse("09:00");
+        private static readonly TimeOnly SabadoAlmocoInicio = TimeOnly.Parse("12:20");
+        private static readonly TimeOnly SabadoAlmocoFim = TimeOnly.Parse("13:20");
+        private static readonly TimeOnly SabadoFim = TimeOnly.Parse("17:20");
 
         /// <summary>
-        /// Retorna os horarios disponiveis para segunda a sexta.
-        /// 09:00, 09:40, 10:20, 11:00, 11:40, 12:20 | 13:20, 14:00, 14:40 ... ate 20:00
+        /// Retorna os horarios disponiveis para segunda-feira (somente tarde).
+        /// 13:20, 14:00, 14:40, 15:20, 16:00, 16:40, 17:20, 18:00, 18:40, 19:20, 20:00
+        /// </summary>
+        public static List<TimeOnly> MontarHorarioSegunda()
+        {
+            return GerarSlotsContinuos(SegundaInicio, SegundaFim);
+        }
+
+        /// <summary>
+        /// Retorna os horarios disponiveis para terca a sexta.
+        /// 10:00, 10:40, 11:20 | 13:20, 14:00, 14:40, 15:20, 16:00, 16:40, 17:20, 18:00, 18:40, 19:20, 20:00
         /// </summary>
         public static List<TimeOnly> MontarHorarioDiaSemana()
         {
@@ -36,7 +49,7 @@ namespace BarbeariaRocha.Aplicacao.Helper
 
         /// <summary>
         /// Retorna os horarios disponiveis para sabado.
-        /// 10:00, 10:40, 11:20, 12:00 | 13:00, 13:40 ... ate 20:00
+        /// 9:00, 9:40, 10:20, 11:00, 11:40, 12:20 | 13:20, 14:00, 14:40, 15:20, 16:00, 16:40, 17:20
         /// </summary>
         public static List<TimeOnly> MontarHorarioSabado()
         {
@@ -53,6 +66,7 @@ namespace BarbeariaRocha.Aplicacao.Helper
             {
                 DayOfWeek.Sunday => new List<TimeOnly>(),
                 DayOfWeek.Saturday => MontarHorarioSabado(),
+                DayOfWeek.Monday => MontarHorarioSegunda(),
                 _ => MontarHorarioDiaSemana()
             };
         }
@@ -83,6 +97,18 @@ namespace BarbeariaRocha.Aplicacao.Helper
                 atual = atual.AddMinutes(IntervaloMinutos);
             }
 
+            return horarios;
+        }
+
+        private static List<TimeOnly> GerarSlotsContinuos(TimeOnly inicio, TimeOnly fim)
+        {
+            var horarios = new List<TimeOnly>();
+            var atual = inicio;
+            while (atual <= fim)
+            {
+                horarios.Add(atual);
+                atual = atual.AddMinutes(IntervaloMinutos);
+            }
             return horarios;
         }
 
