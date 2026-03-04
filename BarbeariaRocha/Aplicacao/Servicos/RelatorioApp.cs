@@ -296,21 +296,13 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                     TaxaConclusao = totalFinalizados > 0 ? Math.Round((decimal)concluidos.Count / totalFinalizados * 100, 2) : 0
                 };
 
-                // Usar comissão histórica se houver dados, senão fallback para porcentagem atual
-                if (comissaoTotal > 0)
+                // Sempre usar comissão histórica (por agendamento) — sem fallback para porcentagem atual
+                if (b.Porcentagem.HasValue && b.Porcentagem.Value > 0 || comissaoTotal > 0)
                 {
                     response.PorcentagemAdmin = b.Porcentagem ?? 0;
                     response.FaturamentoBruto = faturamento;
                     response.ValorComissaoAdmin = comissaoTotal;
                     response.FaturamentoLiquido = faturamento - comissaoTotal;
-                }
-                else if (b.Porcentagem.HasValue && b.Porcentagem.Value > 0)
-                {
-                    // Fallback para agendamentos antigos sem PorcentagemAdminNaEpoca
-                    response.PorcentagemAdmin = b.Porcentagem.Value;
-                    response.FaturamentoBruto = faturamento;
-                    response.ValorComissaoAdmin = Math.Round(faturamento * b.Porcentagem.Value / 100, 2);
-                    response.FaturamentoLiquido = faturamento - response.ValorComissaoAdmin.Value;
                 }
 
                 return response;
@@ -347,12 +339,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 return agendamentos.Sum(a =>
                 {
                     var pct = a.PorcentagemAdminNaEpoca;
-                    if (!pct.HasValue || pct.Value <= 0)
-                    {
-                        // Fallback para porcentagem atual do barbeiro
-                        var barb = _contexto.Usuario.Find(a.BarbeiroId);
-                        pct = barb?.Porcentagem;
-                    }
+                    // Usar apenas a porcentagem gravada no agendamento — sem fallback para porcentagem atual
                     if (pct.HasValue && pct.Value > 0)
                     {
                         var valorServico = a.ServicoId.HasValue ? (_contexto.Servico.Find(a.ServicoId.Value)?.Valor ?? 0) : 0;

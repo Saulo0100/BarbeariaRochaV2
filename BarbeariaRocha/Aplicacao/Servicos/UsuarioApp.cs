@@ -118,6 +118,22 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             var usuario = _contexto.Usuario.Find(id) ?? throw new Exception("Usuário não encontrado.");
             if (porcentagem < 0 || porcentagem > 100)
                 throw new ArgumentException("A porcentagem deve estar entre 0 e 100.");
+
+            // Antes de alterar, gravar a porcentagem antiga em todos os agendamentos
+            // concluídos que ainda não têm PorcentagemAdminNaEpoca preenchida,
+            // para não perder a referência histórica.
+            var porcentagemAntiga = usuario.Porcentagem ?? 0;
+            var agendamentosSemHistorico = _contexto.Agendamento
+                .Where(a => a.BarbeiroId == id
+                    && a.Status == "Concluido"
+                    && a.PorcentagemAdminNaEpoca == null)
+                .ToList();
+
+            foreach (var ag in agendamentosSemHistorico)
+            {
+                ag.PorcentagemAdminNaEpoca = porcentagemAntiga;
+            }
+
             usuario.Porcentagem = porcentagem;
             _contexto.SaveChanges();
         }
