@@ -7,6 +7,7 @@ using BarbeariaRocha.Modelos.Paginacao;
 using BarbeariaRocha.Modelos.Request.Agendamento;
 using BarbeariaRocha.Modelos.Response.Agendamento;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace BarbeariaRocha.Aplicacao.Servicos
 {
@@ -38,7 +39,8 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 Data = agendamento.DataHora,
                 Servico = servico?.Descricao ?? "Serviço não encontrado",
                 DescricaoEtapa = agendamento.DescricaoEtapa,
-                AgendamentoPrincipalId = agendamento.AgendamentoPrincipalId
+                AgendamentoPrincipalId = agendamento.AgendamentoPrincipalId,
+                Adicionais = ObterAdicionaisDoAgendamento(agendamento.Id)
             };
         }
 
@@ -53,6 +55,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
             agendamento.MetodoPagamento = request.MetodoPagamento.ToString();
             agendamento.Status = AgendamentoStatus.Concluido.ToString();
+
+            // Atualizar adicionais se informados
+            if (request.Adicionais != null)
+                SalvarAdicionais(id, request.Adicionais);
 
             // Completar slots complementares associados
             CompletarSlotsComplementares(id);
@@ -221,6 +227,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             _contexto.Agendamento.Add(agendamento);
             _contexto.SaveChanges();
 
+            // Salvar adicionais se informados
+            if (request.Adicionais != null && request.Adicionais.Count > 0)
+                SalvarAdicionais(agendamento.Id, request.Adicionais);
+
             if (ocuparMaisSlot)
             {
                 CriarSlotComplementar(request.BarbeiroId, agendamento);
@@ -266,6 +276,39 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
             foreach (var v in vinculados)
                 v.Status = AgendamentoStatus.CanceladoPeloBarbeiro.ToString();
+        }
+
+        private void SalvarAdicionais(int agendamentoId, List<AdicionalRequest> adicionais)
+        {
+            // Remover adicionais existentes
+            var existentes = _contexto.AgendamentoAdicional.Where(a => a.AgendamentoId == agendamentoId).ToList();
+            if (existentes.Count > 0)
+                _contexto.AgendamentoAdicional.RemoveRange(existentes);
+
+            // Adicionar novos
+            foreach (var adicional in adicionais)
+            {
+                _contexto.AgendamentoAdicional.Add(new AgendamentoAdicional
+                {
+                    AgendamentoId = agendamentoId,
+                    Nome = adicional.Nome,
+                    Valor = adicional.Valor
+                });
+            }
+            _contexto.SaveChanges();
+        }
+
+        private List<AdicionalResponse> ObterAdicionaisDoAgendamento(int agendamentoId)
+        {
+            return _contexto.AgendamentoAdicional
+                .Where(a => a.AgendamentoId == agendamentoId)
+                .Select(a => new AdicionalResponse
+                {
+                    Id = a.Id,
+                    Nome = a.Nome,
+                    Valor = a.Valor
+                })
+                .ToList();
         }
 
         private void CriarSlotComplementar(int barbeiroId, Agendamento agendamentoPrincipal)
@@ -355,7 +398,8 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                     Data = a.DataHora,
                     Servico = servico?.Descricao ?? "Serviço não encontrado",
                     DescricaoEtapa = a.DescricaoEtapa,
-                    AgendamentoPrincipalId = a.AgendamentoPrincipalId
+                    AgendamentoPrincipalId = a.AgendamentoPrincipalId,
+                    Adicionais = ObterAdicionaisDoAgendamento(a.Id)
                 };
             }).ToList();
 
@@ -387,7 +431,8 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 Data = agendamento.DataHora,
                 Servico = servicoAgendamento.Descricao,
                 DescricaoEtapa = agendamento.DescricaoEtapa,
-                AgendamentoPrincipalId = agendamento.AgendamentoPrincipalId
+                AgendamentoPrincipalId = agendamento.AgendamentoPrincipalId,
+                Adicionais = ObterAdicionaisDoAgendamento(agendamento.Id)
             };
         }
 
@@ -501,8 +546,76 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             _contexto.Agendamento.Add(agendamento);
             _contexto.SaveChanges();
 
+            // Salvar adicionais se informados
+            if (request.Adicionais != null && request.Adicionais.Count > 0)
+                SalvarAdicionais(agendamento.Id, request.Adicionais);
+
             if (ocuparMaisSlot)
                 CriarSlotComplementar(request.BarbeiroId, agendamento);
+        }
+
+        public void CancelarAgendamentoComoCliente(int agendamentoId, int clienteId)
+        {
+            var agendamento = _contexto.Agendamento.Find(agendamentoId)
+                ?? throw new Exception("Agendamento não encontrado.");
+
+            if (agendamento.UsuarioId != clienteId)
+                throw new Exception("Este agendamento não pertence a este cliente.");
+
+            var statusCancelavel = new[]
+            {
+                AgendamentoStatus.Pendente.ToString(),
+                AgendamentoStatus.LembreteEnviado.ToString(),
+                AgendamentoStatus.Confirmado.ToString(),
+                AgendamentoStatus.VouAtrasar.ToString()
+            };
+
+            if (!statusCancelavel.Contains(agendamento.Status))
+                throw new Exception("Este agendamento não pode ser cancelado.");
+
+            agendamento.Status = AgendamentoStatus.CanceladoPeloCliente.ToString();
+
+            // Cancelar slots complementares e etapas vinculadas
+            CancelarVinculados(agendamentoId);
+
+            _contexto.SaveChanges();
+        }
+
+        public List<AgendamentoDetalheResponse> ListarAgendamentosCliente(int clienteId)
+        {
+            var statusPendentes = new[]
+            {
+                AgendamentoStatus.Pendente.ToString(),
+                AgendamentoStatus.LembreteEnviado.ToString(),
+                AgendamentoStatus.Confirmado.ToString(),
+                AgendamentoStatus.VouAtrasar.ToString()
+            };
+
+            var agendamentos = _contexto.Agendamento
+                .Where(a => a.UsuarioId == clienteId &&
+                           statusPendentes.Contains(a.Status) &&
+                           a.Status != AgendamentoStatus.SlotReservado.ToString())
+                .OrderBy(a => a.DataHora)
+                .ToList();
+
+            return agendamentos.Select(a =>
+            {
+                var barbeiro = _contexto.Usuario.Find(a.BarbeiroId);
+                var servico = a.ServicoId.HasValue ? _contexto.Servico.Find(a.ServicoId.Value) : null;
+                return new AgendamentoDetalheResponse
+                {
+                    Id = a.Id,
+                    NomeCliente = a.NomeCliente,
+                    NomeBarbeiro = barbeiro?.Nome ?? "Desconhecido",
+                    NumeroCliente = a.NumeroCliente,
+                    Status = a.Status,
+                    Data = a.DataHora,
+                    Servico = servico?.Descricao ?? "Não informado",
+                    DescricaoEtapa = a.DescricaoEtapa,
+                    AgendamentoPrincipalId = a.AgendamentoPrincipalId,
+                    Adicionais = ObterAdicionaisDoAgendamento(a.Id)
+                };
+            }).ToList();
         }
 
         public void GerarToken(string numero)

@@ -44,5 +44,11 @@ namespace BarbeariaRocha.Aplicacao.Contratos
 
         // Cancelar agendamento sem login (com verificação de código)
         void CancelarPorNumero(int agendamentoId, string numero, int codigo);
+
+        // Cancelar agendamento como cliente logado (sem código)
+        void CancelarAgendamentoComoCliente(int agendamentoId, int clienteId);
+
+        // Listar agendamentos pendentes do cliente logado
+        List<AgendamentoDetalheResponse> ListarAgendamentosCliente(int clienteId);
     }
 }

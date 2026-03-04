@@ -19,5 +19,10 @@
         /// ID do agendamento principal (null para etapa 1 ou serviços normais).
         /// </summary>
         public int? AgendamentoPrincipalId { get; set; }
+
+        /// <summary>
+        /// Lista de adicionais associados ao agendamento.
+        /// </summary>
+        public List<AdicionalResponse>? Adicionais { get; set; }
     }
 }

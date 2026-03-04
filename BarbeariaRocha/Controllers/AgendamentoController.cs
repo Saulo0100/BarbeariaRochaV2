@@ -135,6 +135,49 @@ namespace BarbeariaRocha.Controllers
             return NoContent();
         }
 
+        // GET: api/agendamento/MeusAgendamentos
+        // Lista agendamentos pendentes do cliente logado
+        [Authorize]
+        [HttpGet("MeusAgendamentos")]
+        public ActionResult<List<AgendamentoDetalheResponse>> ListarMeusAgendamentos()
+        {
+            var perfil = PerfilUsuario();
+            if (perfil != "Cliente")
+                return Forbid();
+
+            var agendamentos = _app.ListarAgendamentosCliente(UserId());
+            return Ok(agendamentos);
+        }
+
+        // DELETE: api/agendamento/{id}/CancelarComoCliente
+        // Cliente logado cancela seu próprio agendamento sem código
+        [Authorize]
+        [HttpDelete("{id}/CancelarComoCliente")]
+        public IActionResult CancelarComoCliente(int id)
+        {
+            var perfil = PerfilUsuario();
+            if (perfil != "Cliente")
+                return Forbid();
+
+            _app.CancelarAgendamentoComoCliente(id, UserId());
+            return NoContent();
+        }
+
+        // GET: api/agendamento/AdicionaisDisponiveis
+        // Lista os adicionais disponíveis para seleção
+        [AllowAnonymous]
+        [HttpGet("AdicionaisDisponiveis")]
+        public ActionResult<List<object>> ListarAdicionaisDisponiveis()
+        {
+            var adicionais = new List<object>
+            {
+                new { nome = "Barba", valor = 15.00m },
+                new { nome = "Sobrancelha", valor = 10.00m },
+                new { nome = "Hidratação", valor = 25.00m }
+            };
+            return Ok(adicionais);
+        }
+
         // GET: api/agendamento
         [Authorize]
         [HttpGet]
