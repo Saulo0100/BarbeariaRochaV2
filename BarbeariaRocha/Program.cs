@@ -35,6 +35,7 @@ builder.Services.AddSwaggerConfiguration();
 builder.Services.AddScoped<IAgendamentoApp, AgendamentoApp>();
 builder.Services.AddScoped<IAutenticacaoApp, AutenticacaoApp>();
 builder.Services.AddScoped<IUsuarioApp, UsuarioApp>();
+builder.Services.AddScoped<IEmailApp, EmailApp>();
 builder.Services.AddScoped<IServicoApp, ServicoApp>();
 builder.Services.AddScoped<ITokenApp, TokenApp>();
 builder.Services.AddScoped<IExcecaoApp, ExcecaoApp>();

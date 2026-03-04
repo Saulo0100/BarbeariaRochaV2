@@ -31,6 +31,11 @@ public class UsuarioMap : IEntityTypeConfiguration<Usuario>
         builder.Property(x => x.Perfil)
             .IsRequired();
 
+        builder.Property(x => x.EmailConfirmado)
+            .HasDefaultValue(false);
+
+        builder.Property(x => x.TokenConfirmacao)
+            .HasMaxLength(100);
 
     }
 }

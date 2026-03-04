@@ -29,10 +29,13 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                             .AsNoTracking()
                             .FirstOrDefault(x => x.Numero == login.Numero) ?? throw new Exception("Usuário não encontrado");
 
-            if (login.Senha == barbeiro.Senha)
-                return _token.CreateToken(barbeiro);
-            else
+            if (login.Senha != barbeiro.Senha)
                 throw new Exception("Senha inválida");
+
+            if (!barbeiro.EmailConfirmado && barbeiro.Perfil == "Cliente")
+                throw new Exception("Confirme seu email antes de fazer login. Verifique sua caixa de entrada.");
+
+            return _token.CreateToken(barbeiro);
         }
     }
 }

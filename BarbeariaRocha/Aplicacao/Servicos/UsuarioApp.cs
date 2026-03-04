@@ -9,14 +9,43 @@ using BarbeariaRocha.Modelos.Response.Usuario;
 
 namespace BarbeariaRocha.Aplicacao.Servicos
 {
-    public class UsuarioApp(Contexto contexto) : IUsuarioApp
+    public class UsuarioApp(Contexto contexto, IEmailApp emailApp) : IUsuarioApp
     {
         public readonly Contexto _contexto = contexto;
+        private readonly IEmailApp _emailApp = emailApp;
 
         public void Criar(UsuarioCriarRequest request)
         {
+            // Apenas clientes podem se auto-cadastrar
+            if (request.Perfil != Perfil.Cliente)
+                throw new Exception("Apenas clientes podem se cadastrar.");
+
+            var existente = _contexto.Usuario.FirstOrDefault(u => u.Numero == request.Numero && !u.Excluido);
+            if (existente != null)
+                throw new Exception("Já existe um usuário com este número.");
+
             var usuario = new Usuario(request);
             _contexto.Usuario.Add(usuario);
+            _contexto.SaveChanges();
+
+            // Enviar email de confirmação
+            try
+            {
+                _emailApp.EnviarEmailConfirmacao(usuario.Email, usuario.Nome, usuario.TokenConfirmacao!);
+            }
+            catch
+            {
+                // Não falhar o cadastro se o email não for enviado
+            }
+        }
+
+        public void ConfirmarEmail(string token)
+        {
+            var usuario = _contexto.Usuario.FirstOrDefault(u => u.TokenConfirmacao == token && !u.Excluido)
+                ?? throw new Exception("Token inválido ou expirado.");
+
+            usuario.EmailConfirmado = true;
+            usuario.TokenConfirmacao = null;
             _contexto.SaveChanges();
         }
 
