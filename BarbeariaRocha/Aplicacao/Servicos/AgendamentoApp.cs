@@ -7,7 +7,6 @@ using BarbeariaRocha.Modelos.Paginacao;
 using BarbeariaRocha.Modelos.Request.Agendamento;
 using BarbeariaRocha.Modelos.Response.Agendamento;
 using Microsoft.EntityFrameworkCore;
-using System.Linq;
 
 namespace BarbeariaRocha.Aplicacao.Servicos
 {
@@ -139,14 +138,6 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 request.Numero = usuarioLogado.Numero;
                 request.Nome = usuarioLogado.Nome;
             }
-
-            var ultimoAgendamento = _contexto.Agendamento
-            .Where(x => x.NumeroCliente == request.Numero && x.Status == AgendamentoStatus.Concluido.ToString())
-            .OrderByDescending(x => x.DataHora)
-            .FirstOrDefault();
-
-            if (ultimoAgendamento != null && ultimoAgendamento.DataHora.AddDays(6) >= request.DtAgendamento)
-                throw new Exception("Seu ultimo corte foi a menos de 7 dias");
 
             var tempoTotal = servico.TempoEstimado;
             var ocuparMaisSlot = tempoTotal.Hour > 0 || tempoTotal.Minute > 40;
@@ -690,9 +681,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 AgendamentoStatus.Confirmado.ToString(),
                 AgendamentoStatus.VouAtrasar.ToString()
             };
+            var hojeUtc = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Unspecified);
 
             var agendamentos = _contexto.Agendamento
-                .Where(a => a.NumeroCliente == numero && statusPendentes.Contains(a.Status) && a.DataHora > DateTime.UtcNow)
+                .Where(a => a.NumeroCliente == numero && statusPendentes.Contains(a.Status) && a.DataHora.Date >= hojeUtc)
                 .OrderBy(a => a.DataHora)
                 .ToList();
 
@@ -708,7 +700,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                     NumeroCliente = a.NumeroCliente,
                     Status = a.Status,
                     Data = a.DataHora,
-                    Servico = servico?.Nome ?? "Não informado",
+                    Servico = servico?.Descricao ?? "Não informado",
                     DescricaoEtapa = a.DescricaoEtapa,
                     AgendamentoPrincipalId = a.AgendamentoPrincipalId
                 };
