@@ -8,6 +8,7 @@ namespace BarbeariaRocha.Aplicacao.Contratos
     public interface IUsuarioApp
     {
         void Criar(UsuarioCriarRequest request);
+        void CriarComoAdmin(UsuarioCriarRequest request);
         void ConfirmarEmail(string token);
         void Editar(int id, UsuarioEditarRequest request);
         void Excluir(int id);

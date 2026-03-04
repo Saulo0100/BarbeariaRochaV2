@@ -23,6 +23,20 @@ namespace BarbeariaRocha.Controllers
             return StatusCode(StatusCodes.Status201Created);
         }
 
+        // POST: api/Usuarios/CriarComoAdmin
+        // Permite que BarbeiroAdmin cadastre barbeiros e clientes
+        [Authorize]
+        [HttpPost("CriarComoAdmin")]
+        public ActionResult CriarComoAdmin([FromBody] UsuarioCriarRequest request)
+        {
+            var perfil = PerfilUsuario();
+            if (perfil != "BarbeiroAdministrador" && perfil != "Administrador")
+                return Forbid();
+
+            _app.CriarComoAdmin(request);
+            return StatusCode(StatusCodes.Status201Created);
+        }
+
         // GET: api/Usuarios/ConfirmarEmail?token=xxx
         [AllowAnonymous]
         [HttpGet("ConfirmarEmail")]
