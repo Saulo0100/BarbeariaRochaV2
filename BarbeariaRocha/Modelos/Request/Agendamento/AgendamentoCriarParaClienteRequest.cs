@@ -12,5 +12,10 @@ namespace BarbeariaRocha.Modelos.Request.Agendamento
         /// Data/hora da segunda etapa (apenas para serviços com RequerDuasEtapas = true).
         /// </summary>
         public DateTime? DtAgendamentoEtapa2 { get; set; }
+
+        /// <summary>
+        /// Lista de adicionais selecionados pelo cliente.
+        /// </summary>
+        public List<AdicionalRequest>? Adicionais { get; set; }
     }
 }

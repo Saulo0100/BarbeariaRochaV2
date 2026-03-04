@@ -18,6 +18,7 @@ namespace BarbeariaRocha.Modelos.Entidades
         public bool Excluido { get; set; } = false;
         public bool EmailConfirmado { get; set; } = false;
         public string? TokenConfirmacao { get; set; }
+        public decimal? Porcentagem { get; set; }
 
         public Usuario() { }
         [SetsRequiredMembers]

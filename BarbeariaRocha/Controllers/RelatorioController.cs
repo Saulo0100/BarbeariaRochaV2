@@ -20,8 +20,17 @@ namespace BarbeariaRocha.Controllers
         [HttpGet("geral")]
         public ActionResult<RelatorioGeralResponse> ObterRelatorioGeral([FromQuery] RelatorioFiltroRequest filtro)
         {
-            var resultado = _app.ObterRelatorioGeral(filtro);
-            return Ok(resultado);
+            var perfil = PerfilUsuario();
+
+            // Se for barbeiro normal (não admin), retorna relatório com faturamento já subtraído da porcentagem
+            if (perfil == "Barbeiro")
+            {
+                var resultado = _app.ObterRelatorioGeralBarbeiro(filtro, UserId());
+                return Ok(resultado);
+            }
+
+            var resultadoGeral = _app.ObterRelatorioGeral(filtro);
+            return Ok(resultadoGeral);
         }
 
         /// <summary>

@@ -262,12 +262,18 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 var faltaram = agBarbeiro.Where(a =>
                     a.Status == AgendamentoStatus.ClienteFaltou.ToString()).Count();
 
-                var faturamento = concluidos.Sum(a =>
+                var faturamentoServicos = concluidos.Sum(a =>
                     a.ServicoId.HasValue ? (_contexto.Servico.Find(a.ServicoId.Value)?.Valor ?? 0) : 0);
+
+                // Somar valor dos adicionais nos agendamentos concluídos
+                var faturamentoAdicionais = concluidos.Sum(a =>
+                    _contexto.AgendamentoAdicional.Where(ad => ad.AgendamentoId == a.Id).Sum(ad => ad.Valor));
+
+                var faturamento = faturamentoServicos + faturamentoAdicionais;
 
                 var totalFinalizados = concluidos.Count + cancelados + faltaram;
 
-                return new RelatorioBarbeiroResponse
+                var response = new RelatorioBarbeiroResponse
                 {
                     BarbeiroId = b.Id,
                     NomeBarbeiro = b.Nome,
@@ -278,9 +284,42 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                     ClientesFaltaram = faltaram,
                     TaxaConclusao = totalFinalizados > 0 ? Math.Round((decimal)concluidos.Count / totalFinalizados * 100, 2) : 0
                 };
+
+                // Calcular comissão se o barbeiro tiver porcentagem definida
+                if (b.Porcentagem.HasValue && b.Porcentagem.Value > 0)
+                {
+                    response.PorcentagemAdmin = b.Porcentagem.Value;
+                    response.FaturamentoBruto = faturamento;
+                    response.ValorComissaoAdmin = Math.Round(faturamento * b.Porcentagem.Value / 100, 2);
+                    response.FaturamentoLiquido = faturamento - response.ValorComissaoAdmin.Value;
+                }
+
+                return response;
             }).OrderByDescending(r => r.TotalAtendimentos).ToList();
 
             return resultado;
+        }
+
+        public RelatorioGeralResponse ObterRelatorioGeralBarbeiro(RelatorioFiltroRequest filtro, int barbeiroId)
+        {
+            // Obter relatório geral filtrado pelo barbeiro
+            filtro.BarbeiroId = barbeiroId;
+            var relatorio = ObterRelatorioGeral(filtro);
+
+            // Verificar se o barbeiro tem porcentagem definida
+            var barbeiro = _contexto.Usuario.Find(barbeiroId);
+            if (barbeiro?.Porcentagem != null && barbeiro.Porcentagem.Value > 0)
+            {
+                var porcentagem = barbeiro.Porcentagem.Value;
+                // Subtrair a porcentagem do admin dos valores de faturamento
+                relatorio.FaturamentoTotal = relatorio.FaturamentoTotal - Math.Round(relatorio.FaturamentoTotal * porcentagem / 100, 2);
+                relatorio.FaturamentoHoje = relatorio.FaturamentoHoje - Math.Round(relatorio.FaturamentoHoje * porcentagem / 100, 2);
+                relatorio.FaturamentoSemana = relatorio.FaturamentoSemana - Math.Round(relatorio.FaturamentoSemana * porcentagem / 100, 2);
+                relatorio.FaturamentoMes = relatorio.FaturamentoMes - Math.Round(relatorio.FaturamentoMes * porcentagem / 100, 2);
+                relatorio.TicketMedio = relatorio.TotalAtendimentos > 0 ? relatorio.FaturamentoTotal / relatorio.TotalAtendimentos : 0;
+            }
+
+            return relatorio;
         }
     }
 }

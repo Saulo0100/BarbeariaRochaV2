@@ -11,5 +11,6 @@ namespace BarbeariaRocha.Modelos.Request.Usuario
         public TipoAgenda? Agenda { get; set; }
         public required string Descricao { get; set; }
         public required string Senha { get; set; }
+        public decimal? Porcentagem { get; set; }
     }
 }

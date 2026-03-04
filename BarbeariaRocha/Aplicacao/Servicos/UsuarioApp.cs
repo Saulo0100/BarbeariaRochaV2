@@ -46,6 +46,11 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 throw new Exception("Já existe um usuário com este número.");
 
             var usuario = new Usuario(request);
+
+            // Salvar porcentagem do admin se informada (apenas para barbeiros)
+            if (request.Porcentagem.HasValue && request.Porcentagem.Value > 0)
+                usuario.Porcentagem = request.Porcentagem.Value;
+
             _contexto.Usuario.Add(usuario);
             _contexto.SaveChanges();
 
