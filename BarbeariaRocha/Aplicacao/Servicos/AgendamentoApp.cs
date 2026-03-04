@@ -722,6 +722,51 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             }).ToList();
         }
 
+        public AgendamentoDetalheResponse? ProximoAgendamentoPorNumero(string numero, int codigo)
+        {
+            var tokenValido = _contexto.CodigoConfirmacao
+                .FirstOrDefault(t => t.Numero == numero
+                                    && t.Codigo == codigo
+                                    && !t.Confirmado
+                                    && t.DtExpiracao.ToUniversalTime() > DateTime.UtcNow)
+                ?? throw new Exception("Código inválido ou expirado.");
+
+            var statusPendentes = new[]
+            {
+                AgendamentoStatus.Pendente.ToString(),
+                AgendamentoStatus.LembreteEnviado.ToString(),
+                AgendamentoStatus.Confirmado.ToString(),
+                AgendamentoStatus.VouAtrasar.ToString()
+            };
+            var hojeUtc = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Unspecified);
+
+            var agendamento = _contexto.Agendamento
+                .Where(a => a.NumeroCliente == numero && statusPendentes.Contains(a.Status) && a.DataHora.Date >= hojeUtc)
+                .OrderBy(a => a.DataHora)
+                .FirstOrDefault();
+
+            if (agendamento == null)
+                return null;
+
+            var barbeiro = _contexto.Usuario.Find(agendamento.BarbeiroId);
+            var servico = agendamento.ServicoId.HasValue ? _contexto.Servico.Find(agendamento.ServicoId.Value) : null;
+
+            return new AgendamentoDetalheResponse
+            {
+                Id = agendamento.Id,
+                NomeCliente = agendamento.NomeCliente,
+                NomeBarbeiro = barbeiro?.Nome ?? "Desconhecido",
+                NumeroCliente = agendamento.NumeroCliente,
+                Status = agendamento.Status,
+                Data = agendamento.DataHora,
+                Servico = servico?.Descricao ?? "Não informado",
+                ValorServico = servico?.Valor,
+                DescricaoEtapa = agendamento.DescricaoEtapa,
+                AgendamentoPrincipalId = agendamento.AgendamentoPrincipalId,
+                Adicionais = ObterAdicionaisDoAgendamento(agendamento.Id)
+            };
+        }
+
         public void CancelarPorNumero(int agendamentoId, string numero, int codigo)
         {
             var tokenValido = _contexto.CodigoConfirmacao

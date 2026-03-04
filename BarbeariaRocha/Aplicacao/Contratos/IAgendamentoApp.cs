@@ -50,5 +50,8 @@ namespace BarbeariaRocha.Aplicacao.Contratos
 
         // Listar agendamentos pendentes do cliente logado
         List<AgendamentoDetalheResponse> ListarAgendamentosCliente(int clienteId);
+
+        // Obter próximo agendamento por número (após verificação de código)
+        AgendamentoDetalheResponse? ProximoAgendamentoPorNumero(string numero, int codigo);
     }
 }

@@ -24,5 +24,10 @@
         /// Lista de adicionais associados ao agendamento.
         /// </summary>
         public List<AdicionalResponse>? Adicionais { get; set; }
+
+        /// <summary>
+        /// Valor do serviço principal.
+        /// </summary>
+        public decimal? ValorServico { get; set; }
     }
 }
