@@ -15,17 +15,8 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         public void CadastrarMensalista(MensalistaCriarRequest request, int idUsuario)
         {
             ValidarDadosMensalista(request);
+            Usuario.ValidarNumero(request.Numero);
 
-            var usuario = _contexto.Usuario.Find(idUsuario);
-            if (usuario != null)
-            {
-                request.Nome = usuario.Nome;
-                request.Numero = usuario.Numero;
-            }
-            else
-            {
-                Usuario.ValidarNumero(request.Numero);
-            }
             var dia = CultureInfo
                     .GetCultureInfo("pt-BR")
                     .DateTimeFormat
