@@ -119,7 +119,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             var query = _contexto.Usuario.Where(u => !u.Excluido).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(filtro.Filtro?.Nome))
-                query = query.Where(u => u.Nome.Contains(filtro.Filtro.Nome));
+                query = query.Where(u => u.Nome.ToUpper().Contains(filtro.Filtro.Nome.ToUpper()));
 
             if (!string.IsNullOrWhiteSpace(filtro.Filtro?.Perfil))
                 query = query.Where(u => u.Perfil == filtro.Filtro.Perfil);
