@@ -11,6 +11,7 @@ namespace BarbeariaRocha.Infraestrutura.Contexto
         public DbSet<CodigoConfirmacao> CodigoConfirmacao { get; set; }
         public DbSet<Excecao> Excecao { get; set; }
         public DbSet<Mensalista> Mensalista { get; set; }
+        public DbSet<MensalistaCorte> MensalistaCorte { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(Contexto).Assembly);

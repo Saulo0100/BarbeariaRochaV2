@@ -35,6 +35,20 @@ namespace BarbeariaRocha.Controllers
             return StatusCode(StatusCodes.Status201Created);
         }
 
+        // POST: api/agendamento/CriarParaCliente
+        // Barbeiro/Admin cria agendamento para cliente (sem código de confirmação)
+        [Authorize]
+        [HttpPost("CriarParaCliente")]
+        public IActionResult CriarParaCliente([FromBody] AgendamentoCriarParaClienteRequest request)
+        {
+            var perfil = PerfilUsuario();
+            if (perfil == "Cliente")
+                return Forbid();
+
+            _app.CriarAgendamentoParaCliente(request);
+            return StatusCode(StatusCodes.Status201Created);
+        }
+
         // GET: api/agendamento/{id}
         [Authorize]
         [HttpGet("{id}")]
