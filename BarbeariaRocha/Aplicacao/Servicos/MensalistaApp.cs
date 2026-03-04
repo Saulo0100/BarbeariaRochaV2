@@ -58,18 +58,25 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         {
             var inicioMes = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
             var fimMes = inicioMes.AddMonths(1);
+            var statusConcluido = AgendamentoStatus.Concluido.ToString();
 
             var mensalistas = _contexto.Mensalista
                 .Select(m => new MensalistaResponse
                 {
                     Id = m.Id,
                     Nome = m.Nome,
+                    Numero = m.Numero,
                     Tipo = m.Tipo,
                     Status = m.Status,
                     Dia = m.Dia,
                     Valor = m.Valor,
                     CortesNoMes = _contexto.MensalistaCorte
                         .Count(c => c.MensalistaId == m.Id && c.DataCorte >= inicioMes && c.DataCorte < fimMes),
+                    AtendimentosNoMes = _contexto.Agendamento
+                        .Count(a => a.NumeroCliente == m.Numero
+                            && a.Status == statusConcluido
+                            && a.DataHora >= inicioMes
+                            && a.DataHora < fimMes),
                     Cortes = _contexto.MensalistaCorte
                         .Where(c => c.MensalistaId == m.Id)
                         .OrderByDescending(c => c.DataCorte)
