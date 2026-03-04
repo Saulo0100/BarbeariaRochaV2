@@ -15,12 +15,21 @@ namespace BarbeariaRocha.Controllers
         public readonly IUsuarioApp _app = app;
 
         // POST: api/Usuarios
-        [Authorize]
+        [AllowAnonymous]
         [HttpPost]
         public ActionResult Criar([FromBody] UsuarioCriarRequest request)
         {
             _app.Criar(request);
             return StatusCode(StatusCodes.Status201Created);
+        }
+
+        // GET: api/Usuarios/ConfirmarEmail?token=xxx
+        [AllowAnonymous]
+        [HttpGet("ConfirmarEmail")]
+        public ActionResult ConfirmarEmail([FromQuery] string token)
+        {
+            _app.ConfirmarEmail(token);
+            return Ok("Email confirmado com sucesso!");
         }
 
         // PUT: api/Usuarios/{id}
