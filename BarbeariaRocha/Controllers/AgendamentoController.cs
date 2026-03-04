@@ -163,6 +163,20 @@ namespace BarbeariaRocha.Controllers
             return NoContent();
         }
 
+        // GET: api/agendamento/ProximoAgendamentoPorNumero
+        // Retorna apenas o próximo agendamento pendente por número (após verificação de código)
+        [AllowAnonymous]
+        [HttpGet("ProximoAgendamentoPorNumero")]
+        public ActionResult<AgendamentoDetalheResponse> ProximoAgendamentoPorNumero(
+            [FromQuery] string numero,
+            [FromQuery] int codigo)
+        {
+            var agendamento = _app.ProximoAgendamentoPorNumero(numero, codigo);
+            if (agendamento == null)
+                return Ok(new { mensagem = "Nenhum agendamento pendente encontrado para este número." });
+            return Ok(agendamento);
+        }
+
         // GET: api/agendamento/AdicionaisDisponiveis
         // Lista os adicionais disponíveis para seleção
         [AllowAnonymous]

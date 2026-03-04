@@ -9,5 +9,6 @@ namespace BarbeariaRocha.Modelos.Response.Usuario
         public required string Numero { get; set; }
         public required string Email { get; set; }
         public Perfil Perfil { get; set; }
+        public string? Foto { get; set; }
     }
 }
