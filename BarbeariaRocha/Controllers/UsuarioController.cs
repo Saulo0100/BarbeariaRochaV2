@@ -37,6 +37,20 @@ namespace BarbeariaRocha.Controllers
             return StatusCode(StatusCodes.Status201Created);
         }
 
+        // PATCH: api/Usuarios/{id}/Porcentagem
+        // Permite que BarbeiroAdmin edite a porcentagem de comissão de um barbeiro
+        [Authorize]
+        [HttpPatch("{id}/Porcentagem")]
+        public ActionResult EditarPorcentagem(int id, [FromBody] decimal porcentagem)
+        {
+            var perfil = PerfilUsuario();
+            if (perfil != "BarbeiroAdministrador" && perfil != "Administrador")
+                return Forbid();
+
+            _app.EditarPorcentagem(id, porcentagem);
+            return NoContent();
+        }
+
         // GET: api/Usuarios/ConfirmarEmail?token=xxx
         [AllowAnonymous]
         [HttpGet("ConfirmarEmail")]

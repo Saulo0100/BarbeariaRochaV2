@@ -1,5 +1,6 @@
 using BarbeariaRocha.Aplicacao.Contratos;
 using BarbeariaRocha.Infraestrutura.Contexto;
+using BarbeariaRocha.Modelos.Entidades;
 using BarbeariaRocha.Modelos.Enums;
 using BarbeariaRocha.Modelos.Request.Relatorio;
 using BarbeariaRocha.Modelos.Response.Relatorio;
@@ -73,7 +74,6 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 FaturamentoHoje = faturamentoHoje,
                 FaturamentoSemana = faturamentoSemana,
                 FaturamentoMes = faturamentoMes,
-                TicketMedio = todosConcluidos.Count > 0 ? faturamentoTotal / todosConcluidos.Count : 0,
                 AgendamentosPendentes = pendentes,
                 CancelamentosTotal = cancelados,
                 ClientesFaltaram = faltaram,
@@ -273,21 +273,40 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
                 var totalFinalizados = concluidos.Count + cancelados + faltaram;
 
+                // Calcular comissão usando porcentagem histórica por agendamento
+                var comissaoTotal = concluidos.Sum(a =>
+                {
+                    if (a.PorcentagemAdminNaEpoca.HasValue && a.PorcentagemAdminNaEpoca.Value > 0)
+                    {
+                        var valorServico = a.ServicoId.HasValue ? (_contexto.Servico.Find(a.ServicoId.Value)?.Valor ?? 0) : 0;
+                        var valorAdicionais = _contexto.AgendamentoAdicional.Where(ad => ad.AgendamentoId == a.Id).Sum(ad => ad.Valor);
+                        return Math.Round((valorServico + valorAdicionais) * a.PorcentagemAdminNaEpoca.Value / 100, 2);
+                    }
+                    return 0m;
+                });
+
                 var response = new RelatorioBarbeiroResponse
                 {
                     BarbeiroId = b.Id,
                     NomeBarbeiro = b.Nome,
                     TotalAtendimentos = concluidos.Count,
                     Faturamento = faturamento,
-                    TicketMedio = concluidos.Count > 0 ? faturamento / concluidos.Count : 0,
                     CancelamentosTotal = cancelados,
                     ClientesFaltaram = faltaram,
                     TaxaConclusao = totalFinalizados > 0 ? Math.Round((decimal)concluidos.Count / totalFinalizados * 100, 2) : 0
                 };
 
-                // Calcular comissão se o barbeiro tiver porcentagem definida
-                if (b.Porcentagem.HasValue && b.Porcentagem.Value > 0)
+                // Usar comissão histórica se houver dados, senão fallback para porcentagem atual
+                if (comissaoTotal > 0)
                 {
+                    response.PorcentagemAdmin = b.Porcentagem ?? 0;
+                    response.FaturamentoBruto = faturamento;
+                    response.ValorComissaoAdmin = comissaoTotal;
+                    response.FaturamentoLiquido = faturamento - comissaoTotal;
+                }
+                else if (b.Porcentagem.HasValue && b.Porcentagem.Value > 0)
+                {
+                    // Fallback para agendamentos antigos sem PorcentagemAdminNaEpoca
                     response.PorcentagemAdmin = b.Porcentagem.Value;
                     response.FaturamentoBruto = faturamento;
                     response.ValorComissaoAdmin = Math.Round(faturamento * b.Porcentagem.Value / 100, 2);
@@ -306,17 +325,55 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             filtro.BarbeiroId = barbeiroId;
             var relatorio = ObterRelatorioGeral(filtro);
 
-            // Verificar se o barbeiro tem porcentagem definida
-            var barbeiro = _contexto.Usuario.Find(barbeiroId);
-            if (barbeiro?.Porcentagem != null && barbeiro.Porcentagem.Value > 0)
+            // Calcular comissão usando porcentagem histórica por agendamento
+            var queryBarbeiro = _contexto.Agendamento
+                .Where(a => a.BarbeiroId == barbeiroId && a.Status == AgendamentoStatus.Concluido.ToString())
+                .Where(a => a.AgendamentoPrincipalId == null)
+                .AsQueryable();
+
+            if (filtro.DataInicio.HasValue)
+                queryBarbeiro = queryBarbeiro.Where(a => a.DataHora >= filtro.DataInicio.Value);
+            if (filtro.DataFim.HasValue)
+                queryBarbeiro = queryBarbeiro.Where(a => a.DataHora < filtro.DataFim.Value.AddDays(1));
+
+            var concluidosBarbeiro = queryBarbeiro.ToList();
+            var hoje = DateTime.Today;
+            var inicioSemana = hoje.AddDays(-(int)hoje.DayOfWeek);
+            var inicioMes = new DateTime(hoje.Year, hoje.Month, 1);
+
+            // Função para calcular comissão de uma lista de agendamentos
+            decimal CalcularComissao(IEnumerable<Agendamento> agendamentos)
             {
-                var porcentagem = barbeiro.Porcentagem.Value;
-                // Subtrair a porcentagem do admin dos valores de faturamento
-                relatorio.FaturamentoTotal = relatorio.FaturamentoTotal - Math.Round(relatorio.FaturamentoTotal * porcentagem / 100, 2);
-                relatorio.FaturamentoHoje = relatorio.FaturamentoHoje - Math.Round(relatorio.FaturamentoHoje * porcentagem / 100, 2);
-                relatorio.FaturamentoSemana = relatorio.FaturamentoSemana - Math.Round(relatorio.FaturamentoSemana * porcentagem / 100, 2);
-                relatorio.FaturamentoMes = relatorio.FaturamentoMes - Math.Round(relatorio.FaturamentoMes * porcentagem / 100, 2);
-                relatorio.TicketMedio = relatorio.TotalAtendimentos > 0 ? relatorio.FaturamentoTotal / relatorio.TotalAtendimentos : 0;
+                return agendamentos.Sum(a =>
+                {
+                    var pct = a.PorcentagemAdminNaEpoca;
+                    if (!pct.HasValue || pct.Value <= 0)
+                    {
+                        // Fallback para porcentagem atual do barbeiro
+                        var barb = _contexto.Usuario.Find(a.BarbeiroId);
+                        pct = barb?.Porcentagem;
+                    }
+                    if (pct.HasValue && pct.Value > 0)
+                    {
+                        var valorServico = a.ServicoId.HasValue ? (_contexto.Servico.Find(a.ServicoId.Value)?.Valor ?? 0) : 0;
+                        var valorAdicionais = _contexto.AgendamentoAdicional.Where(ad => ad.AgendamentoId == a.Id).Sum(ad => ad.Valor);
+                        return Math.Round((valorServico + valorAdicionais) * pct.Value / 100, 2);
+                    }
+                    return 0m;
+                });
+            }
+
+            var comissaoTotal = CalcularComissao(concluidosBarbeiro);
+            var comissaoHoje = CalcularComissao(concluidosBarbeiro.Where(a => a.DataHora.Date == hoje));
+            var comissaoSemana = CalcularComissao(concluidosBarbeiro.Where(a => a.DataHora.Date >= inicioSemana));
+            var comissaoMes = CalcularComissao(concluidosBarbeiro.Where(a => a.DataHora.Date >= inicioMes));
+
+            if (comissaoTotal > 0)
+            {
+                relatorio.FaturamentoTotal -= comissaoTotal;
+                relatorio.FaturamentoHoje -= comissaoHoje;
+                relatorio.FaturamentoSemana -= comissaoSemana;
+                relatorio.FaturamentoMes -= comissaoMes;
             }
 
             return relatorio;

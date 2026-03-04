@@ -27,6 +27,12 @@ namespace BarbeariaRocha.Modelos.Entidades
         /// </summary>
         public string? DescricaoEtapa { get; set; }
 
+        /// <summary>
+        /// Porcentagem do admin registrada no momento em que o agendamento foi concluído.
+        /// Preserva o histórico para cálculos de comissão mesmo se a porcentagem for alterada depois.
+        /// </summary>
+        public decimal? PorcentagemAdminNaEpoca { get; set; }
+
         public Agendamento() { }
 
         [SetsRequiredMembers]
