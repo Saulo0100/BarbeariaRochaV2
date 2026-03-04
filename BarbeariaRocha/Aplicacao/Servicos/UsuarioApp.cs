@@ -113,6 +113,15 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             _contexto.SaveChanges();
         }
 
+        public void EditarPorcentagem(int id, decimal porcentagem)
+        {
+            var usuario = _contexto.Usuario.Find(id) ?? throw new Exception("Usuário não encontrado.");
+            if (porcentagem < 0 || porcentagem > 100)
+                throw new ArgumentException("A porcentagem deve estar entre 0 e 100.");
+            usuario.Porcentagem = porcentagem;
+            _contexto.SaveChanges();
+        }
+
         public IEnumerable<BarbeirosDetalhesResponse> ObterBarbeiros()
         {
             var perfisBarbeiro = new[] { Perfil.Barbeiro.ToString(), Perfil.BarbeiroAdministrador.ToString() };

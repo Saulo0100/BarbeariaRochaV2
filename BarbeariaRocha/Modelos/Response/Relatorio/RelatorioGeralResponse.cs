@@ -10,7 +10,6 @@ namespace BarbeariaRocha.Modelos.Response.Relatorio
         public decimal FaturamentoHoje { get; set; }
         public decimal FaturamentoSemana { get; set; }
         public decimal FaturamentoMes { get; set; }
-        public decimal TicketMedio { get; set; }
         public int AgendamentosPendentes { get; set; }
         public int CancelamentosTotal { get; set; }
         public int ClientesFaltaram { get; set; }

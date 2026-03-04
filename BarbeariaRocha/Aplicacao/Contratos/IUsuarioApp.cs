@@ -12,6 +12,7 @@ namespace BarbeariaRocha.Aplicacao.Contratos
         void ConfirmarEmail(string token);
         void Editar(int id, UsuarioEditarRequest request);
         void Excluir(int id);
+        void EditarPorcentagem(int id, decimal porcentagem);
         UsuarioDetalhesResponse ObterPorId(int id);
         PaginacaoResultado<UsuarioDetalhesResponse> ObterTodos(PaginacaoFiltro<UsuarioFiltroRequest> filtro);
         IEnumerable<BarbeirosDetalhesResponse> ObterBarbeiros();
