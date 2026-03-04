@@ -56,6 +56,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             agendamento.MetodoPagamento = request.MetodoPagamento.ToString();
             agendamento.Status = AgendamentoStatus.Concluido.ToString();
 
+            // Registrar porcentagem do admin na época da conclusão
+            RegistrarPorcentagemAdmin(agendamento);
+
             // Atualizar adicionais se informados
             if (request.Adicionais != null)
                 SalvarAdicionais(id, request.Adicionais);
@@ -93,6 +96,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             var agendamento = _contexto.Agendamento.Find(id) ?? throw new Exception("Agendamento não encontrado.");
             agendamento.Status = AgendamentoStatus.Concluido.ToString();
             agendamento.MetodoPagamento = request.MetodoPagamento.ToString();
+
+            // Registrar porcentagem do admin na época da conclusão
+            RegistrarPorcentagemAdmin(agendamento);
 
             // Completar slots complementares associados
             CompletarSlotsComplementares(id);
@@ -311,6 +317,15 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 .ToList();
         }
 
+        private void RegistrarPorcentagemAdmin(Agendamento agendamento)
+        {
+            var barbeiro = _contexto.Usuario.Find(agendamento.BarbeiroId);
+            if (barbeiro?.Porcentagem != null && barbeiro.Porcentagem.Value > 0)
+            {
+                agendamento.PorcentagemAdminNaEpoca = barbeiro.Porcentagem.Value;
+            }
+        }
+
         private void CriarSlotComplementar(int barbeiroId, Agendamento agendamentoPrincipal)
         {
             var agendamentoSlot = new Agendamento
@@ -379,7 +394,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             var totalRegistros = query.Count();
 
             var agendamentos = query
-                .OrderBy(a => a.DataHora)
+                .OrderByDescending(a => a.DataHora)
                 .Skip((request.Pagina - 1) * request.ItensPorPagina)
                 .Take(request.ItensPorPagina)
                 .ToList();
