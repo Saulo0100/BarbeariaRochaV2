@@ -391,6 +391,120 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             };
         }
 
+        public void CriarAgendamentoParaCliente(AgendamentoCriarParaClienteRequest request)
+        {
+            if (request.DtAgendamento == default)
+                throw new ArgumentException("Data e hora do agendamento são obrigatórios.", nameof(request.DtAgendamento));
+
+            if (string.IsNullOrWhiteSpace(request.Nome))
+                throw new ArgumentException("O nome do cliente é obrigatório.", nameof(request.Nome));
+
+            if (string.IsNullOrWhiteSpace(request.Numero))
+                throw new ArgumentException("O número do cliente é obrigatório.", nameof(request.Numero));
+
+            Usuario.ValidarNumero(request.Numero);
+
+            // Verificar se existe exceção para essa data
+            var dataAgendamento = request.DtAgendamento.Date;
+            var existeExcecao = _contexto.Excecao
+                .Any(e => e.Excluido == false &&
+                         e.Data.Date == dataAgendamento &&
+                         (e.BarbeiroId == null || e.BarbeiroId == request.BarbeiroId));
+
+            if (existeExcecao)
+            {
+                var excecao = _contexto.Excecao
+                    .FirstOrDefault(e => e.Excluido == false &&
+                                        e.Data.Date == dataAgendamento &&
+                                        (e.BarbeiroId == null || e.BarbeiroId == request.BarbeiroId));
+                throw new Exception($"Não é possível agendar nesta data. Motivo: {excecao?.Descricao}");
+            }
+
+            var barbeiro = _contexto.Usuario.Find(request.BarbeiroId) ?? throw new Exception("Barbeiro não encontrado.");
+            var servico = _contexto.Servico.Find(request.ServicoId) ?? throw new Exception("Serviço não encontrado.");
+
+            // Buscar usuário pelo número (se existir)
+            var usuarioCliente = _contexto.Usuario.FirstOrDefault(u => u.Numero == request.Numero && !u.Excluido);
+
+            var tempoTotal = servico.TempoEstimado;
+            var ocuparMaisSlot = tempoTotal.Hour > 0 || tempoTotal.Minute > 40;
+
+            // Serviço com 2 etapas
+            if (servico.RequerDuasEtapas)
+            {
+                if (request.DtAgendamentoEtapa2 == null || request.DtAgendamentoEtapa2 == default)
+                    throw new ArgumentException("Para este serviço, é necessário informar o horário da segunda etapa.");
+
+                var dataEtapa1 = DateTime.SpecifyKind(request.DtAgendamento, DateTimeKind.Unspecified);
+                var dataEtapa2 = DateTime.SpecifyKind(request.DtAgendamentoEtapa2.Value, DateTimeKind.Unspecified);
+
+                var diferencaHoras = (dataEtapa2 - dataEtapa1).TotalHours;
+                if (diferencaHoras < servico.IntervaloMinimoHoras)
+                    throw new Exception($"O intervalo entre as etapas deve ser de pelo menos {servico.IntervaloMinimoHoras} horas.");
+
+                ValidarConflito(request.BarbeiroId, dataEtapa1, tempoTotal);
+                ValidarConflito(request.BarbeiroId, dataEtapa2, tempoTotal);
+
+                var agendamentoEtapa1 = new Agendamento
+                {
+                    UsuarioId = usuarioCliente?.Id,
+                    BarbeiroId = request.BarbeiroId,
+                    ServicoId = request.ServicoId,
+                    NomeCliente = request.Nome,
+                    NumeroCliente = request.Numero,
+                    Status = AgendamentoStatus.Pendente.ToString(),
+                    DataHora = dataEtapa1,
+                    DescricaoEtapa = servico.DescricaoEtapa1 ?? "Etapa 1"
+                };
+                _contexto.Agendamento.Add(agendamentoEtapa1);
+                _contexto.SaveChanges();
+
+                if (ocuparMaisSlot)
+                    CriarSlotComplementar(request.BarbeiroId, agendamentoEtapa1);
+
+                var agendamentoEtapa2 = new Agendamento
+                {
+                    UsuarioId = usuarioCliente?.Id,
+                    BarbeiroId = request.BarbeiroId,
+                    ServicoId = request.ServicoId,
+                    NomeCliente = request.Nome,
+                    NumeroCliente = request.Numero,
+                    Status = AgendamentoStatus.Pendente.ToString(),
+                    DataHora = dataEtapa2,
+                    AgendamentoPrincipalId = agendamentoEtapa1.Id,
+                    DescricaoEtapa = servico.DescricaoEtapa2 ?? "Etapa 2"
+                };
+                _contexto.Agendamento.Add(agendamentoEtapa2);
+                _contexto.SaveChanges();
+
+                if (ocuparMaisSlot)
+                    CriarSlotComplementar(request.BarbeiroId, agendamentoEtapa2);
+
+                return;
+            }
+
+            // Serviço normal
+            var dataInicio = DateTime.SpecifyKind(request.DtAgendamento, DateTimeKind.Unspecified);
+            ValidarConflito(request.BarbeiroId, dataInicio, tempoTotal);
+
+            var agendamento = new Agendamento
+            {
+                UsuarioId = usuarioCliente?.Id,
+                BarbeiroId = request.BarbeiroId,
+                ServicoId = request.ServicoId,
+                NomeCliente = request.Nome,
+                NumeroCliente = request.Numero,
+                Status = AgendamentoStatus.Pendente.ToString(),
+                DataHora = dataInicio
+            };
+
+            _contexto.Agendamento.Add(agendamento);
+            _contexto.SaveChanges();
+
+            if (ocuparMaisSlot)
+                CriarSlotComplementar(request.BarbeiroId, agendamento);
+        }
+
         public void GerarToken(string numero)
         {
             var tokenAtivo = _contexto.CodigoConfirmacao

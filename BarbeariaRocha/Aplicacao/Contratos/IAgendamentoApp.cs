@@ -12,6 +12,9 @@ namespace BarbeariaRocha.Aplicacao.Contratos
         // Criar novo agendamento
         void CriarAgendamento(AgendamentoCriarRequest request);
 
+        // Criar agendamento para cliente (barbeiro/admin cria sem código de confirmação)
+        void CriarAgendamentoParaCliente(AgendamentoCriarParaClienteRequest request);
+
         // Buscar agendamento por Id
         AgendamentoDetalheResponse ObterPorId(int id);
 

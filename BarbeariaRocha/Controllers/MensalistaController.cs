@@ -31,4 +31,28 @@ public class MensalistaController(IMensalistaApp app) : BaseController
         var mensalistas = _app.ObterTodos();
         return Ok(mensalistas);
     }
+
+    // POST: api/mensalista/corte
+    [HttpPost("corte")]
+    public IActionResult RegistrarCorte([FromBody] MensalistaRegistrarCorteRequest request)
+    {
+        _app.RegistrarCorte(request);
+        return StatusCode(StatusCodes.Status201Created);
+    }
+
+    // GET: api/mensalista/{mensalistaId}/cortes
+    [HttpGet("{mensalistaId}/cortes")]
+    public ActionResult<IEnumerable<MensalistaCorteResponse>> ListarCortes(int mensalistaId, [FromQuery] int? mes = null, [FromQuery] int? ano = null)
+    {
+        var cortes = _app.ListarCortes(mensalistaId, mes, ano);
+        return Ok(cortes);
+    }
+
+    // DELETE: api/mensalista/corte/{corteId}
+    [HttpDelete("corte/{corteId}")]
+    public IActionResult DeletarCorte(int corteId)
+    {
+        _app.DeletarCorte(corteId);
+        return Ok();
+    }
 }

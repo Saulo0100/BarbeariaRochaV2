@@ -8,5 +8,7 @@
         public required string Status { get; set; }
         public required string Dia { get; set; }
         public decimal Valor { get; set; }
+        public int CortesNoMes { get; set; }
+        public List<MensalistaCorteResponse> Cortes { get; set; } = [];
     }
 }

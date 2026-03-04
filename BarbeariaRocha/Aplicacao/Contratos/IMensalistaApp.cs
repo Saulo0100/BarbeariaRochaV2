@@ -8,5 +8,8 @@ namespace BarbeariaRocha.Aplicacao.Contratos
         void CadastrarMensalista(MensalistaCriarRequest request, int idUsuario);
         void CancelarMensalista(int idMensalista);
         IEnumerable<MensalistaResponse> ObterTodos();
+        void RegistrarCorte(MensalistaRegistrarCorteRequest request);
+        IEnumerable<MensalistaCorteResponse> ListarCortes(int mensalistaId, int? mes = null, int? ano = null);
+        void DeletarCorte(int corteId);
     }
 }
