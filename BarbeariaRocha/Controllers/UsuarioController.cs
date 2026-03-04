@@ -65,9 +65,26 @@ namespace BarbeariaRocha.Controllers
 
         // GET: api/Usuarios
         [HttpGet]
-        public ActionResult<PaginacaoResultado<UsuarioListarResponse>> Listar([FromQuery] PaginacaoFiltro<UsuarioFiltroRequest> filtro)
+        public ActionResult<PaginacaoResultado<UsuarioListarResponse>> Listar(
+            [FromQuery] int pagina = 1,
+            [FromQuery] int itensPorPagina = 10,
+            [FromQuery] string? nome = null,
+            [FromQuery] string? perfil = null)
         {
-            var Usuarios = _app.ObterTodos(filtro);
+            var filtroRequest = new UsuarioFiltroRequest
+            {
+                Nome = nome,
+                Perfil = perfil
+            };
+
+            var paginacaoFiltro = new PaginacaoFiltro<UsuarioFiltroRequest>
+            {
+                Pagina = pagina,
+                ItensPorPagina = itensPorPagina,
+                Filtro = filtroRequest
+            };
+
+            var Usuarios = _app.ObterTodos(paginacaoFiltro);
             return Ok(Usuarios);
         }
 
