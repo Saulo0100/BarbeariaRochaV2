@@ -39,6 +39,27 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             }
         }
 
+        public void CriarComoAdmin(UsuarioCriarRequest request)
+        {
+            var existente = _contexto.Usuario.FirstOrDefault(u => u.Numero == request.Numero && !u.Excluido);
+            if (existente != null)
+                throw new Exception("Já existe um usuário com este número.");
+
+            var usuario = new Usuario(request);
+            _contexto.Usuario.Add(usuario);
+            _contexto.SaveChanges();
+
+            // Enviar email de confirmação
+            try
+            {
+                _emailApp.EnviarEmailConfirmacao(usuario.Email, usuario.Nome, usuario.TokenConfirmacao!);
+            }
+            catch
+            {
+                // Não falhar o cadastro se o email não for enviado
+            }
+        }
+
         public void ConfirmarEmail(string token)
         {
             var usuario = _contexto.Usuario.FirstOrDefault(u => u.TokenConfirmacao == token && !u.Excluido)
@@ -74,6 +95,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             if (!string.IsNullOrWhiteSpace(request.Agenda?.ToString()))
                 usuario.Agenda = request.Agenda?.ToString();
 
+            if (!string.IsNullOrWhiteSpace(request.Foto))
+                usuario.Foto = Convert.FromBase64String(request.Foto);
+
             _contexto.SaveChanges();
         }
 
@@ -93,7 +117,8 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 Id = b.Id,
                 Nome = b.Nome,
                 Descricao = b.Descricao,
-                Agenda = b.Agenda!
+                Agenda = b.Agenda!,
+                Foto = b.Foto != null ? Convert.ToBase64String(b.Foto) : null
             });
         }
 

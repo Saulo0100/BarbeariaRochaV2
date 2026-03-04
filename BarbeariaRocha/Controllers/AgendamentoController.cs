@@ -103,6 +103,38 @@ namespace BarbeariaRocha.Controllers
             return NoContent();
         }
 
+        // POST: api/agendamento/GerarTokenCancelamento
+        // Gera token para cancelamento sem login
+        [AllowAnonymous]
+        [HttpPost("GerarTokenCancelamento")]
+        public IActionResult GerarTokenCancelamento([FromBody] string numero)
+        {
+            _app.GerarTokenCancelamento(numero);
+            return StatusCode(StatusCodes.Status201Created);
+        }
+
+        // GET: api/agendamento/PendentesPorNumero
+        // Lista agendamentos pendentes por número (após verificação de código)
+        [AllowAnonymous]
+        [HttpGet("PendentesPorNumero")]
+        public ActionResult<List<AgendamentoDetalheResponse>> ListarPendentesPorNumero(
+            [FromQuery] string numero,
+            [FromQuery] int codigo)
+        {
+            var agendamentos = _app.ListarPendentesPorNumero(numero, codigo);
+            return Ok(agendamentos);
+        }
+
+        // POST: api/agendamento/CancelarPorNumero
+        // Cancela agendamento sem login (com verificação de código)
+        [AllowAnonymous]
+        [HttpPost("CancelarPorNumero")]
+        public IActionResult CancelarPorNumero([FromBody] AgendamentoCancelarPorNumeroRequest request)
+        {
+            _app.CancelarPorNumero(request.AgendamentoId, request.Numero, request.CodigoConfirmacao);
+            return NoContent();
+        }
+
         // GET: api/agendamento
         [Authorize]
         [HttpGet]

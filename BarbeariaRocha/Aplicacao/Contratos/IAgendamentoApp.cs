@@ -35,5 +35,14 @@ namespace BarbeariaRocha.Aplicacao.Contratos
 
         // Marcar cliente como faltou (no-show)
         void MarcarClienteFaltou(int id);
+
+        // Gerar token para cancelamento sem login
+        void GerarTokenCancelamento(string numero);
+
+        // Listar agendamentos pendentes por número (após verificação de código)
+        List<AgendamentoDetalheResponse> ListarPendentesPorNumero(string numero, int codigo);
+
+        // Cancelar agendamento sem login (com verificação de código)
+        void CancelarPorNumero(int agendamentoId, string numero, int codigo);
     }
 }

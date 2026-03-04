@@ -536,5 +536,93 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             _contexto.SaveChanges();
             HelperGenerico.EnviarMensagem(codigo.ToString(), numero);
         }
+
+        public void GerarTokenCancelamento(string numero)
+        {
+            var tokenAtivo = _contexto.CodigoConfirmacao
+                .FirstOrDefault(t => t.Numero == numero && !t.Confirmado && t.DtExpiracao.ToUniversalTime() > DateTime.UtcNow);
+
+            if (tokenAtivo != null && tokenAtivo.Reenviado)
+                throw new Exception("Já foi enviado um código de confirmação. Por favor, verifique seu telefone.");
+
+            if (tokenAtivo != null && !tokenAtivo.Reenviado)
+            {
+                HelperGenerico.EnviarMensagem(tokenAtivo.Codigo.ToString(), numero);
+                tokenAtivo.Reenviado = true;
+                _contexto.SaveChanges();
+                return;
+            }
+
+            var codigo = HelperGenerico.GerarCodigoConfirmacao();
+            var salvarToken = new CodigoConfirmacao(numero, codigo);
+
+            _contexto.CodigoConfirmacao.Add(salvarToken);
+            _contexto.SaveChanges();
+            HelperGenerico.EnviarMensagem(codigo.ToString(), numero);
+        }
+
+        public List<AgendamentoDetalheResponse> ListarPendentesPorNumero(string numero, int codigo)
+        {
+            var tokenValido = _contexto.CodigoConfirmacao
+                .FirstOrDefault(t => t.Numero == numero
+                                    && t.Codigo == codigo
+                                    && !t.Confirmado
+                                    && t.DtExpiracao.ToUniversalTime() > DateTime.UtcNow)
+                ?? throw new Exception("Código inválido ou expirado.");
+
+            var statusPendentes = new[]
+            {
+                AgendamentoStatus.Pendente.ToString(),
+                AgendamentoStatus.LembreteEnviado.ToString(),
+                AgendamentoStatus.Confirmado.ToString(),
+                AgendamentoStatus.VouAtrasar.ToString()
+            };
+
+            var agendamentos = _contexto.Agendamento
+                .Where(a => a.NumeroCliente == numero && statusPendentes.Contains(a.Status) && a.DataHora > DateTime.UtcNow)
+                .OrderBy(a => a.DataHora)
+                .ToList();
+
+            return agendamentos.Select(a =>
+            {
+                var barbeiro = _contexto.Usuario.Find(a.BarbeiroId);
+                var servico = a.ServicoId.HasValue ? _contexto.Servico.Find(a.ServicoId.Value) : null;
+                return new AgendamentoDetalheResponse
+                {
+                    Id = a.Id,
+                    NomeCliente = a.NomeCliente,
+                    NomeBarbeiro = barbeiro?.Nome ?? "Desconhecido",
+                    NumeroCliente = a.NumeroCliente,
+                    Status = a.Status,
+                    Data = a.DataHora,
+                    Servico = servico?.Nome ?? "Não informado",
+                    DescricaoEtapa = a.DescricaoEtapa,
+                    AgendamentoPrincipalId = a.AgendamentoPrincipalId
+                };
+            }).ToList();
+        }
+
+        public void CancelarPorNumero(int agendamentoId, string numero, int codigo)
+        {
+            var tokenValido = _contexto.CodigoConfirmacao
+                .FirstOrDefault(t => t.Numero == numero
+                                    && t.Codigo == codigo
+                                    && !t.Confirmado
+                                    && t.DtExpiracao.ToUniversalTime() > DateTime.UtcNow)
+                ?? throw new Exception("Código inválido ou expirado.");
+
+            var agendamento = _contexto.Agendamento.Find(agendamentoId)
+                ?? throw new Exception("Agendamento não encontrado.");
+
+            if (agendamento.NumeroCliente != numero)
+                throw new Exception("Este agendamento não pertence a este número.");
+
+            agendamento.Status = AgendamentoStatus.CanceladoPeloCliente.ToString();
+
+            // Cancelar slots complementares e etapas vinculadas
+            CancelarVinculados(agendamentoId);
+
+            _contexto.SaveChanges();
+        }
     }
 }
