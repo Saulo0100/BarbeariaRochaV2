@@ -1,4 +1,5 @@
 ﻿using BarbeariaRocha.Aplicacao.Contratos;
+using BarbeariaRocha.Aplicacao.Helper;
 using BarbeariaRocha.Infraestrutura.Contexto;
 using BarbeariaRocha.Modelos.Entidades;
 using BarbeariaRocha.Modelos.Enums;
@@ -29,17 +30,41 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 Valor = request.Valor,
                 Dia = dia,
                 Tipo = request.Tipo.ToString(),
-                Status = MensalistaStatus.Ativo.ToString()
+                Status = MensalistaStatus.Ativo.ToString(),
+                Horario = request.Horario,
+                BarbeiroId = request.BarbeiroId,
+                ServicoId = request.ServicoId
             };
 
             _contexto.Mensalista.Add(mensalista);
             _contexto.SaveChanges();
+
+            // Gerar agendamentos para este mensalista (mês atual + próximo)
+            if (!string.IsNullOrEmpty(request.Horario) && request.BarbeiroId.HasValue)
+            {
+                GerarAgendamentosParaMensalista(mensalista, request.Dia);
+            }
         }
 
         public void CancelarMensalista(int idMensalista)
         {
             var mensalista = _contexto.Mensalista.Find(idMensalista)
                 ?? throw new Exception("Mensalista não encontrado.");
+
+            // Cancelar agendamentos futuros auto-gerados deste mensalista
+            var agora = DateTime.Now;
+            var prefixo = $"Mensalista: {mensalista.Nome}";
+            var agendamentosFuturos = _contexto.Agendamento
+                .Where(a => a.NomeCliente == prefixo
+                    && a.NumeroCliente == mensalista.Numero
+                    && a.DataHora > agora
+                    && a.Status == AgendamentoStatus.Pendente.ToString())
+                .ToList();
+
+            foreach (var ag in agendamentosFuturos)
+            {
+                ag.Status = AgendamentoStatus.CanceladoPeloBarbeiro.ToString();
+            }
 
             _contexto.Mensalista.Remove(mensalista);
             _contexto.SaveChanges();
@@ -61,6 +86,15 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                     Status = m.Status,
                     Dia = m.Dia,
                     Valor = m.Valor,
+                    Horario = m.Horario,
+                    BarbeiroId = m.BarbeiroId,
+                    NomeBarbeiro = m.BarbeiroId.HasValue
+                        ? _contexto.Usuario.Where(u => u.Id == m.BarbeiroId.Value).Select(u => u.Nome).FirstOrDefault()
+                        : null,
+                    ServicoId = m.ServicoId,
+                    NomeServico = m.ServicoId.HasValue
+                        ? _contexto.Servico.Where(s => s.Id == m.ServicoId.Value).Select(s => s.Nome).FirstOrDefault()
+                        : null,
                     CortesNoMes = _contexto.MensalistaCorte
                         .Count(c => c.MensalistaId == m.Id && c.DataCorte >= inicioMes && c.DataCorte < fimMes),
                     AtendimentosNoMes = _contexto.Agendamento
@@ -132,6 +166,125 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 ?? throw new Exception("Corte não encontrado.");
 
             _contexto.MensalistaCorte.Remove(corte);
+            _contexto.SaveChanges();
+        }
+
+        /// <summary>
+        /// Gera agendamentos para todos os mensalistas ativos que possuem horário e barbeiro definidos.
+        /// Cria agendamentos para o mês atual e o próximo mês, pulando datas já ocupadas ou no passado.
+        /// </summary>
+        public void GerarAgendamentosMensalistas()
+        {
+            var mensalistas = _contexto.Mensalista
+                .Where(m => m.Status == MensalistaStatus.Ativo.ToString()
+                    && m.Horario != null
+                    && m.BarbeiroId != null)
+                .ToList();
+
+            var culture = CultureInfo.GetCultureInfo("pt-BR");
+
+            foreach (var mensalista in mensalistas)
+            {
+                // Descobrir o DayOfWeek a partir do nome do dia em português
+                DayOfWeek? diaSemana = null;
+                for (int i = 0; i < 7; i++)
+                {
+                    var dow = (DayOfWeek)i;
+                    if (culture.DateTimeFormat.GetDayName(dow).Equals(mensalista.Dia, StringComparison.OrdinalIgnoreCase))
+                    {
+                        diaSemana = dow;
+                        break;
+                    }
+                }
+
+                if (diaSemana == null) continue;
+
+                GerarAgendamentosParaMensalista(mensalista, diaSemana.Value);
+            }
+        }
+
+        /// <summary>
+        /// Gera agendamentos para um mensalista específico no mês atual e próximo.
+        /// </summary>
+        private void GerarAgendamentosParaMensalista(Mensalista mensalista, DayOfWeek diaSemana)
+        {
+            if (string.IsNullOrEmpty(mensalista.Horario) || !mensalista.BarbeiroId.HasValue)
+                return;
+
+            var horario = TimeOnly.Parse(mensalista.Horario);
+            var barbeiroId = mensalista.BarbeiroId.Value;
+            var prefixo = $"Mensalista: {mensalista.Nome}";
+            var agora = DateTime.Now;
+
+            // Datas do mês atual e próximo mês
+            var inicioMesAtual = new DateTime(agora.Year, agora.Month, 1);
+            var fimProximoMes = inicioMesAtual.AddMonths(2);
+
+            // Encontrar todas as ocorrências do dia da semana no período
+            var datasParaAgendar = new List<DateTime>();
+            var data = inicioMesAtual;
+            while (data < fimProximoMes)
+            {
+                if (data.DayOfWeek == diaSemana)
+                {
+                    var dataHora = data.Add(horario.ToTimeSpan());
+                    // Não criar agendamentos no passado
+                    if (dataHora > agora)
+                    {
+                        datasParaAgendar.Add(dataHora);
+                    }
+                }
+                data = data.AddDays(1);
+            }
+
+            // Verificar quais datas já possuem agendamento (deste mensalista ou outro)
+            var statusCancelado1 = AgendamentoStatus.CanceladoPeloCliente.ToString();
+            var statusCancelado2 = AgendamentoStatus.CanceladoPeloBarbeiro.ToString();
+
+            foreach (var dataHora in datasParaAgendar)
+            {
+                // Verificar se já existe agendamento deste mensalista nesta data/hora
+                var jaExisteMensalista = _contexto.Agendamento
+                    .Any(a => a.NomeCliente == prefixo
+                        && a.NumeroCliente == mensalista.Numero
+                        && a.BarbeiroId == barbeiroId
+                        && a.DataHora == dataHora
+                        && a.Status != statusCancelado1
+                        && a.Status != statusCancelado2);
+
+                if (jaExisteMensalista) continue;
+
+                // Verificar se o horário está ocupado por outro agendamento
+                var horarioOcupado = _contexto.Agendamento
+                    .Any(a => a.BarbeiroId == barbeiroId
+                        && a.DataHora == dataHora
+                        && a.Status != statusCancelado1
+                        && a.Status != statusCancelado2);
+
+                if (horarioOcupado) continue;
+
+                // Verificar se existe exceção para esta data
+                var existeExcecao = _contexto.Excecao
+                    .Any(e => !e.Excluido
+                        && e.Data.Date == dataHora.Date
+                        && (e.BarbeiroId == null || e.BarbeiroId == barbeiroId));
+
+                if (existeExcecao) continue;
+
+                // Criar o agendamento
+                var agendamento = new Agendamento
+                {
+                    NomeCliente = prefixo,
+                    NumeroCliente = mensalista.Numero,
+                    BarbeiroId = barbeiroId,
+                    ServicoId = mensalista.ServicoId,
+                    DataHora = dataHora,
+                    Status = AgendamentoStatus.Pendente.ToString()
+                };
+
+                _contexto.Agendamento.Add(agendamento);
+            }
+
             _contexto.SaveChanges();
         }
 

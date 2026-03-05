@@ -10,5 +10,8 @@
         public required string Tipo { get; set; }
         public required string Status { get; set; }
         public bool Excluido { get; set; } = false;
+        public string? Horario { get; set; }
+        public int? BarbeiroId { get; set; }
+        public int? ServicoId { get; set; }
     }
 }

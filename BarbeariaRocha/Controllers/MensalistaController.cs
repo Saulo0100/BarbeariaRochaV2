@@ -55,4 +55,15 @@ public class MensalistaController(IMensalistaApp app) : BaseController
         _app.DeletarCorte(corteId);
         return Ok();
     }
+
+    /// <summary>
+    /// Gera/atualiza agendamentos para todos os mensalistas ativos.
+    /// Deve ser chamado ao abrir o app para manter os horários bloqueados.
+    /// </summary>
+    [HttpPost("gerar-agendamentos")]
+    public IActionResult GerarAgendamentos()
+    {
+        _app.GerarAgendamentosMensalistas();
+        return Ok();
+    }
 }
