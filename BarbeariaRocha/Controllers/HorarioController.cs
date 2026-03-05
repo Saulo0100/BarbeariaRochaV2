@@ -63,5 +63,19 @@ namespace BarbeariaRocha.Controllers
             var resultado = _app.ObterTodosHorariosPorData(data);
             return Ok(resultado);
         }
+
+        /// <summary>
+        /// Retorna todos os horários válidos para um barbeiro em um dia da semana.
+        /// Considera horário de funcionamento do dia e período de trabalho do barbeiro.
+        /// Não filtra por ocupação nem horários passados. Usado para cadastro de mensalistas.
+        /// </summary>
+        [HttpGet("mensalista")]
+        public ActionResult<List<string>> ObterHorariosMensalista(
+            [FromQuery] int barbeiroId,
+            [FromQuery] int diaSemana)
+        {
+            var resultado = _app.ObterHorariosMensalista(barbeiroId, diaSemana);
+            return Ok(resultado);
+        }
     }
 }

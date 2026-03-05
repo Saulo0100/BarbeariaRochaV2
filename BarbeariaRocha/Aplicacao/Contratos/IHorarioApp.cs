@@ -8,5 +8,6 @@ namespace BarbeariaRocha.Aplicacao.Contratos
         HorariosDisponiveisServicoResponse ObterHorariosDisponiveisPorServico(int barbeiroId, DateTime data, int servicoId);
         HorariosDisponiveisServicoResponse ObterHorariosEtapa2(int barbeiroId, DateTime data, int servicoId, string horaEtapa1);
         List<string> ObterTodosHorariosPorData(DateTime data);
+        List<string> ObterHorariosMensalista(int barbeiroId, int diaSemana);
     }
 }
