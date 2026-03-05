@@ -9,9 +9,10 @@ namespace BarbeariaRocha.Controllers
 {
     [ApiController]
     [Route("api/agendamento")]
-    public class AgendamentoController(IAgendamentoApp app) : BaseController
+    public class AgendamentoController(IAgendamentoApp app, IAdicionalApp adicionalApp) : BaseController
     {
         private readonly IAgendamentoApp _app = app;
+        private readonly IAdicionalApp _adicionalApp = adicionalApp;
 
         // GET: api/agendamento/horarios
         [HttpGet("HorariosOcupados")]
@@ -178,17 +179,12 @@ namespace BarbeariaRocha.Controllers
         }
 
         // GET: api/agendamento/AdicionaisDisponiveis
-        // Lista os adicionais disponíveis para seleção
+        // Lista os adicionais disponíveis para seleção (agora lê do banco via AdicionalController)
         [AllowAnonymous]
         [HttpGet("AdicionaisDisponiveis")]
         public ActionResult<List<object>> ListarAdicionaisDisponiveis()
         {
-            var adicionais = new List<object>
-            {
-                new { nome = "Barba", valor = 15.00m },
-                new { nome = "Sobrancelha", valor = 10.00m },
-                new { nome = "Hidratação", valor = 25.00m }
-            };
+            var adicionais = _adicionalApp.ListarAdicionais();
             return Ok(adicionais);
         }
 

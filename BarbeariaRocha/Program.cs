@@ -47,6 +47,7 @@ builder.Services.AddScoped<IMensalistaApp, MensalistaApp>();
 builder.Services.AddScoped<ITestesApp, TestesApp>();
 builder.Services.AddScoped<IRelatorioApp, RelatorioApp>();
 builder.Services.AddScoped<IHorarioApp, HorarioApp>();
+builder.Services.AddScoped<IAdicionalApp, AdicionalApp>();
 builder.Services.AddSingleton<TokenProvider>();
 
 // -------------------- JWT --------------------

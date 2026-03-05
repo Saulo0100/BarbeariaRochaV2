@@ -13,6 +13,7 @@ namespace BarbeariaRocha.Infraestrutura.Contexto
         public DbSet<Mensalista> Mensalista { get; set; }
         public DbSet<MensalistaCorte> MensalistaCorte { get; set; }
         public DbSet<AgendamentoAdicional> AgendamentoAdicional { get; set; }
+        public DbSet<Adicional> Adicional { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(Contexto).Assembly);
