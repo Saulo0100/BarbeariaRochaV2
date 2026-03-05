@@ -37,6 +37,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 Status = agendamento.Status,
                 Data = agendamento.DataHora,
                 Servico = servico?.Descricao ?? "Serviço não encontrado",
+                ValorServico = servico?.Valor,
                 DescricaoEtapa = agendamento.DescricaoEtapa,
                 AgendamentoPrincipalId = agendamento.AgendamentoPrincipalId,
                 Adicionais = ObterAdicionaisDoAgendamento(agendamento.Id)
@@ -403,6 +404,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                     Status = a.Status,
                     Data = a.DataHora,
                     Servico = servico?.Descricao ?? "Serviço não encontrado",
+                    ValorServico = servico?.Valor,
                     DescricaoEtapa = a.DescricaoEtapa,
                     AgendamentoPrincipalId = a.AgendamentoPrincipalId,
                     Adicionais = ObterAdicionaisDoAgendamento(a.Id)
@@ -436,6 +438,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 Status = agendamento.Status,
                 Data = agendamento.DataHora,
                 Servico = servicoAgendamento.Descricao,
+                ValorServico = servicoAgendamento.Valor,
                 DescricaoEtapa = agendamento.DescricaoEtapa,
                 AgendamentoPrincipalId = agendamento.AgendamentoPrincipalId,
                 Adicionais = ObterAdicionaisDoAgendamento(agendamento.Id)
@@ -617,6 +620,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                     Status = a.Status,
                     Data = a.DataHora,
                     Servico = servico?.Descricao ?? "Não informado",
+                    ValorServico = servico?.Valor,
                     DescricaoEtapa = a.DescricaoEtapa,
                     AgendamentoPrincipalId = a.AgendamentoPrincipalId,
                     Adicionais = ObterAdicionaisDoAgendamento(a.Id)
@@ -716,6 +720,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                     Status = a.Status,
                     Data = a.DataHora,
                     Servico = servico?.Descricao ?? "Não informado",
+                    ValorServico = servico?.Valor,
                     DescricaoEtapa = a.DescricaoEtapa,
                     AgendamentoPrincipalId = a.AgendamentoPrincipalId
                 };
