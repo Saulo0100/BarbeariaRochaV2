@@ -207,6 +207,31 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 .ToList();
         }
 
+        /// <summary>
+        /// Retorna todos os horários válidos para um barbeiro em um dia da semana específico.
+        /// Considera o horário de funcionamento do dia (segunda só tarde, sábado horário diferente)
+        /// e o período de trabalho do barbeiro (manhã/tarde/dia todo).
+        /// Não filtra por horários ocupados nem por horários passados.
+        /// Usado para cadastro de mensalistas.
+        /// </summary>
+        public List<string> ObterHorariosMensalista(int barbeiroId, int diaSemana)
+        {
+            // Criar uma data fictícia para o dia da semana solicitado (usar uma data futura)
+            var hoje = DateTime.Today;
+            var dataReferencia = hoje;
+            while ((int)dataReferencia.DayOfWeek != diaSemana)
+            {
+                dataReferencia = dataReferencia.AddDays(1);
+            }
+
+            var todosHorarios = HelperGenerico.ObterHorariosPorData(dataReferencia);
+            todosHorarios = FiltrarPorPeriodoTrabalho(todosHorarios, barbeiroId);
+
+            return todosHorarios
+                .Select(h => h.ToString("HH:mm"))
+                .ToList();
+        }
+
         // ==================== MÉTODOS AUXILIARES ====================
 
         /// <summary>
