@@ -22,6 +22,19 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                     .DateTimeFormat
                     .GetDayName(request.Dia);
 
+            // Validar se já existe mensalista com mesmo barbeiro, dia e horário
+            if (request.BarbeiroId.HasValue && !string.IsNullOrEmpty(request.Horario))
+            {
+                var duplicado = _contexto.Mensalista
+                    .Any(m => m.BarbeiroId == request.BarbeiroId.Value
+                        && m.Dia == dia
+                        && m.Horario == request.Horario
+                        && m.Status == MensalistaStatus.Ativo.ToString());
+
+                if (duplicado)
+                    throw new Exception("Já existe um mensalista ativo para este barbeiro neste dia e horário.");
+            }
+
             var mensalista = new Mensalista
             {
                 Nome = request.Nome,
