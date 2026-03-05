@@ -47,6 +47,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             }
 
             var todosHorarios = HelperGenerico.ObterHorariosPorData(data);
+            todosHorarios = FiltrarPorPeriodoTrabalho(todosHorarios, barbeiroId);
             var horariosOcupados = ObterHorariosOcupados(barbeiroId, data);
 
             var agora = DateTime.Now;
@@ -103,6 +104,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             }
 
             var todosHorarios = HelperGenerico.ObterHorariosPorData(data);
+            todosHorarios = FiltrarPorPeriodoTrabalho(todosHorarios, barbeiroId);
             var horariosOcupados = ObterHorariosOcupados(barbeiroId, data);
             var agora = DateTime.Now;
 
@@ -175,6 +177,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 throw new Exception("Este serviço não requer duas etapas.");
 
             var todosHorarios = HelperGenerico.ObterHorariosPorData(data);
+            todosHorarios = FiltrarPorPeriodoTrabalho(todosHorarios, barbeiroId);
             var horariosOcupados = ObterHorariosOcupados(barbeiroId, data);
             var agora = DateTime.Now;
 
@@ -205,6 +208,27 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         }
 
         // ==================== MÉTODOS AUXILIARES ====================
+
+        /// <summary>
+        /// Filtra horários com base no período de trabalho do barbeiro (Manhã, Tarde, Dia Todo).
+        /// </summary>
+        private List<TimeOnly> FiltrarPorPeriodoTrabalho(List<TimeOnly> horarios, int barbeiroId)
+        {
+            var barbeiro = _contexto.Usuario.Find(barbeiroId);
+            if (barbeiro == null || string.IsNullOrEmpty(barbeiro.PeriodoTrabalho) || barbeiro.PeriodoTrabalho == "DiaTodo")
+                return horarios;
+
+            // Horário de almoço como divisor: manhã = antes de 13:20, tarde = a partir de 13:20
+            var almocoFim = new TimeOnly(13, 20);
+
+            if (barbeiro.PeriodoTrabalho == "Manha")
+                return horarios.Where(h => h < almocoFim).ToList();
+
+            if (barbeiro.PeriodoTrabalho == "Tarde")
+                return horarios.Where(h => h >= almocoFim).ToList();
+
+            return horarios;
+        }
 
         private HashSet<TimeOnly> ObterHorariosOcupados(int barbeiroId, DateTime data)
         {

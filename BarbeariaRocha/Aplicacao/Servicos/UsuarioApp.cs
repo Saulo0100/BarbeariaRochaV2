@@ -51,6 +51,14 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             if (request.Porcentagem.HasValue && request.Porcentagem.Value > 0)
                 usuario.Porcentagem = request.Porcentagem.Value;
 
+            // Salvar período de trabalho se informado (apenas para barbeiros)
+            if (request.PeriodoTrabalho.HasValue)
+            {
+                var periodo = (Enums.PeriodoTrabalho)request.PeriodoTrabalho.Value;
+                if (Enum.IsDefined(typeof(Enums.PeriodoTrabalho), periodo))
+                    usuario.PeriodoTrabalho = periodo.ToString();
+            }
+
             _contexto.Usuario.Add(usuario);
             _contexto.SaveChanges();
 

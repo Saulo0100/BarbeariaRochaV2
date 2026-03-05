@@ -12,5 +12,10 @@
         public int CortesNoMes { get; set; }
         public int AtendimentosNoMes { get; set; }
         public List<MensalistaCorteResponse> Cortes { get; set; } = [];
+        public string? Horario { get; set; }
+        public int? BarbeiroId { get; set; }
+        public string? NomeBarbeiro { get; set; }
+        public int? ServicoId { get; set; }
+        public string? NomeServico { get; set; }
     }
 }

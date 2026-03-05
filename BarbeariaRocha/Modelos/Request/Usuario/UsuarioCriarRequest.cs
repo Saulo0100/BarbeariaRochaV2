@@ -12,5 +12,6 @@ namespace BarbeariaRocha.Modelos.Request.Usuario
         public required string Descricao { get; set; }
         public required string Senha { get; set; }
         public decimal? Porcentagem { get; set; }
+        public int? PeriodoTrabalho { get; set; }
     }
 }
