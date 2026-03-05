@@ -1,5 +1,4 @@
 ﻿using BarbeariaRocha.Aplicacao.Contratos;
-using BarbeariaRocha.Aplicacao.Helper;
 using BarbeariaRocha.Infraestrutura.Contexto;
 using BarbeariaRocha.Modelos.Entidades;
 using BarbeariaRocha.Modelos.Enums;
@@ -93,7 +92,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                         : null,
                     ServicoId = m.ServicoId,
                     NomeServico = m.ServicoId.HasValue
-                        ? _contexto.Servico.Where(s => s.Id == m.ServicoId.Value).Select(s => s.Nome).FirstOrDefault()
+                        ? _contexto.Servico.Where(s => s.Id == m.ServicoId.Value).Select(s => s.Descricao).FirstOrDefault()
                         : null,
                     CortesNoMes = _contexto.MensalistaCorte
                         .Count(c => c.MensalistaId == m.Id && c.DataCorte >= inicioMes && c.DataCorte < fimMes),

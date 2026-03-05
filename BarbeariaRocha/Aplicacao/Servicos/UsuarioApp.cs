@@ -54,8 +54,8 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             // Salvar período de trabalho se informado (apenas para barbeiros)
             if (request.PeriodoTrabalho.HasValue)
             {
-                var periodo = (Enums.PeriodoTrabalho)request.PeriodoTrabalho.Value;
-                if (Enum.IsDefined(typeof(Enums.PeriodoTrabalho), periodo))
+                var periodo = (PeriodoTrabalho)request.PeriodoTrabalho.Value;
+                if (Enum.IsDefined(typeof(PeriodoTrabalho), periodo))
                     usuario.PeriodoTrabalho = periodo.ToString();
             }
 
