@@ -1,6 +1,7 @@
 ﻿using BarbeariaRocha.Aplicacao.Contratos;
 using BarbeariaRocha.Infraestrutura.Contexto;
 using BarbeariaRocha.Modelos.Entidades;
+using BarbeariaRocha.Modelos.Enums;
 using BarbeariaRocha.Modelos.Paginacao;
 using BarbeariaRocha.Modelos.Request.Servico;
 using BarbeariaRocha.Modelos.Response.Servico;
@@ -13,6 +14,18 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public void CriarServico(ServicoCriarRequest request)
         {
+            if (string.IsNullOrWhiteSpace(request.Descricao))
+                throw new ArgumentException("A descrição é obrigatória.");
+
+            if (request.Valor <= 0)
+                throw new ArgumentException("O valor é obrigatório e deve ser maior que zero.");
+
+            if (request.TempoEstimado <= 0)
+                throw new ArgumentException("O tempo estimado é obrigatório e deve ser maior que zero.");
+
+            if (!Enum.IsDefined(typeof(CategoriaServico), request.Categoria))
+                throw new ArgumentException("A categoria é obrigatória e deve ser válida.");
+
             var servico = new Servico
             {
                 Descricao = request.Descricao,

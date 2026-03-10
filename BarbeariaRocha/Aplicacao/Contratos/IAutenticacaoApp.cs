@@ -7,5 +7,6 @@ namespace BarbeariaRocha.Aplicacao.Contratos
         string Login(LoginRequest login);
         void EsqueceuSenha(EsqueceuSenhaRequest request);
         void AtualizarSenha(int id, string novaSenha);
+        void RedefinirSenha(RedefinirSenhaRequest request);
     }
 }

@@ -29,5 +29,12 @@ namespace BarbeariaRocha.Controllers
             _app.AtualizarSenha(UserId(), novaSenha);
             return Ok();
         }
+
+        [HttpPost("RedefinirSenha")]
+        public ActionResult RedefinirSenha([FromBody] RedefinirSenhaRequest request)
+        {
+            _app.RedefinirSenha(request);
+            return Ok();
+        }
     }
 }
