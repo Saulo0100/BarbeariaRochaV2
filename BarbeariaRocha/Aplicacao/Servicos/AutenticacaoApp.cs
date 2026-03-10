@@ -27,7 +27,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             login.Numero = HelperGenerico.RemoveMask(login.Numero);
             var barbeiro = _contexto.Set<Usuario>()
                             .AsNoTracking()
-                            .FirstOrDefault(x => x.Numero == login.Numero) ?? throw new Exception("Usuário não encontrado");
+                            .FirstOrDefault(x => x.Numero == login.Numero && x.Excluido == false) ?? throw new Exception("Usuário não encontrado");
 
             if (login.Senha != barbeiro.Senha)
                 throw new Exception("Senha inválida");
