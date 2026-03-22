@@ -47,6 +47,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
             var usuario = new Usuario(request);
 
+            // Usuário criado pelo barbeiro/admin já tem email confirmado automaticamente
+            usuario.EmailConfirmado = true;
+            usuario.TokenConfirmacao = null;
+
             // Salvar porcentagem do admin se informada (apenas para barbeiros)
             if (request.Porcentagem.HasValue && request.Porcentagem.Value > 0)
                 usuario.Porcentagem = request.Porcentagem.Value;
@@ -61,16 +65,6 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
             _contexto.Usuario.Add(usuario);
             _contexto.SaveChanges();
-
-            // Enviar email de confirmação
-            try
-            {
-                _emailApp.EnviarEmailConfirmacao(usuario.Email, usuario.Nome, usuario.TokenConfirmacao!);
-            }
-            catch
-            {
-                // Não falhar o cadastro se o email não for enviado
-            }
         }
 
         public void ConfirmarEmail(string token)
