@@ -29,6 +29,13 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 query = query.Where(a => a.DataHora < filtro.DataFim.Value.AddDays(1));
 
             var concluidos = query.Where(a => a.Status == AgendamentoStatus.Concluido.ToString());
+
+            var idsAgendamentos = concluidos.Select(z => z.Id).ToList();
+
+            var adicionais = _contexto.AgendamentoAdicional
+                .Where(x => idsAgendamentos.Contains(x.AgendamentoId))
+                .ToList();
+
             var hoje = DateTime.Today;
             var inicioSemana = hoje.AddDays(-(int)hoje.DayOfWeek);
             var inicioMes = new DateTime(hoje.Year, hoje.Month, 1);
@@ -38,16 +45,29 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             var faturamentoTotal = todosConcluidos.Sum(a =>
                 a.ServicoId.HasValue ? (_contexto.Servico.Find(a.ServicoId.Value)?.Valor ?? 0) : 0);
 
+            faturamentoTotal += adicionais.Sum(a => a.Valor);
+
             var cortesHoje = todosConcluidos.Where(a => a.DataHora.Date == hoje).ToList();
+            var cortesHojeIds = cortesHoje.Select(h => h.Id).ToList();
+            var adicionaisHoje = _contexto.AgendamentoAdicional.Where(x => cortesHojeIds.Contains(x.AgendamentoId)).ToList();
+
             var cortesSemana = todosConcluidos.Where(a => a.DataHora.Date >= inicioSemana).ToList();
+            var cortesSemanaIds = cortesSemana.Select(h => h.Id).ToList();
+            var adicionaisSemana = _contexto.AgendamentoAdicional.Where(x => cortesSemanaIds.Contains(x.AgendamentoId)).ToList();
+
             var cortesMes = todosConcluidos.Where(a => a.DataHora.Date >= inicioMes).ToList();
+            var cortesMesIds = cortesMes.Select(h => h.Id).ToList();
+            var adicionaisMes = _contexto.AgendamentoAdicional.Where(x => cortesMesIds.Contains(x.AgendamentoId)).ToList();
 
             var faturamentoHoje = cortesHoje.Sum(a =>
-                a.ServicoId.HasValue ? (_contexto.Servico.Find(a.ServicoId.Value)?.Valor ?? 0) : 0);
+                a.ServicoId.HasValue ? (_contexto.Servico.Find(a.ServicoId.Value)?.Valor ?? 0) : 0)
+                + (adicionaisHoje.Count != 0 ? adicionaisHoje.Sum(x => x.Valor) : 0);
             var faturamentoSemana = cortesSemana.Sum(a =>
-                a.ServicoId.HasValue ? (_contexto.Servico.Find(a.ServicoId.Value)?.Valor ?? 0) : 0);
+                a.ServicoId.HasValue ? (_contexto.Servico.Find(a.ServicoId.Value)?.Valor ?? 0) : 0)
+                + (adicionaisSemana.Count != 0 ? adicionaisSemana.Sum(x => x.Valor) : 0);
             var faturamentoMes = cortesMes.Sum(a =>
-                a.ServicoId.HasValue ? (_contexto.Servico.Find(a.ServicoId.Value)?.Valor ?? 0) : 0);
+                a.ServicoId.HasValue ? (_contexto.Servico.Find(a.ServicoId.Value)?.Valor ?? 0) : 0)
+                + (adicionaisMes.Count != 0 ? adicionaisMes.Sum(x => x.Valor) : 0);
 
             var cancelados = query.Where(a =>
                 a.Status == AgendamentoStatus.CanceladoPeloCliente.ToString() ||
