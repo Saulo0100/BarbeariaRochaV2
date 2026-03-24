@@ -38,10 +38,25 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 };
         }
 
-        public bool VerificarDominio(string dominio)
+        public async Task<bool> VerificarDominio(string dominio)
         {
             if (string.IsNullOrWhiteSpace(dominio))
                 throw new ArgumentException("Domínio não informado.");
+
+            var response = await _httpClient.GetAsync($"verificar-dominio?dominio={dominio}");
+
+            if (!response.IsSuccessStatusCode)
+                return false;
+
+            var json = await response.Content.ReadAsStringAsync();
+
+            // 🔥 Caso a API retorne: { "autorizado": true }
+            var autorizado = JsonSerializer.Deserialize<bool>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return autorizado;
         }
     }
 }

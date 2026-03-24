@@ -4,6 +4,7 @@ using BarbeariaRocha.Configurations;
 using BarbeariaRocha.Infraestrutura;
 using BarbeariaRocha.Infraestrutura.Contexto;
 using BarbeariaRocha.Infraestrutura.Middlewares;
+using BarbeariaRocha.Infraestrutura.MultiTenancy;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -17,13 +18,23 @@ builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
 
+// -------------------- MULTI-TENANCY --------------------
+
+builder.Services.AddHttpContextAccessor();
+builder.Services.Configure<TenantOptions>(
+    builder.Configuration.GetSection(TenantOptions.SectionName)
+);
+builder.Services.AddScoped<ITenantService, TenantService>();
+
 // -------------------- DATABASE --------------------
 
-builder.Services.AddDbContext<Contexto>(options =>
-    options.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection")
-    )
-);
+// O DbContext resolve a connection string do tenant atual em cada requisição.
+// A ContextoFactory (design-time) continua usando DefaultConnection para migrations.
+builder.Services.AddDbContext<Contexto>((serviceProvider, options) =>
+{
+    var tenantService = serviceProvider.GetRequiredService<ITenantService>();
+    options.UseNpgsql(tenantService.ObterConnectionString());
+});
 
 // -------------------- CONTROLLERS --------------------
 
@@ -118,6 +129,7 @@ var app = builder.Build();
 // -------------------- MIDDLEWARE --------------------
 
 app.UseMiddleware<ExceptionMiddleware>();
+app.UseMiddleware<TenantMiddleware>();
 
 // -------------------- PIPELINE --------------------
 
