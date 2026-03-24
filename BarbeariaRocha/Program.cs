@@ -51,6 +51,12 @@ builder.Services.AddScoped<IAdicionalApp, AdicionalApp>();
 builder.Services.AddScoped<IConfiguracaoSiteApp, ConfiguracaoSiteApp>();
 builder.Services.AddSingleton<TokenProvider>();
 
+builder.Services.AddHttpClient<IConfiguracaoSiteApp, ConfiguracaoSiteApp>(client =>
+{
+    var baseUrl = builder.Configuration["Apis:ConfiguracaoBaseUrl"] ?? throw new Exception("Sso Api not configured");
+    client.BaseAddress = new Uri(baseUrl);
+});
+
 // -------------------- JWT --------------------
 
 var jwtSecret = builder.Configuration["Jwt:Secret"]

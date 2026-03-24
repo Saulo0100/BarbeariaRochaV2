@@ -4,7 +4,7 @@ namespace BarbeariaRocha.Aplicacao.Contratos
 {
     public interface IConfiguracaoSiteApp
     {
-        ConfiguracaoSiteResponse ObterConfiguracao(string dominio);
+        Task<ConfiguracaoSiteResponse> ObterConfiguracao(string dominio);
         bool VerificarDominio(string dominio);
     }
 }
