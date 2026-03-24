@@ -15,10 +15,4 @@ public class ConfiguracaoSiteController(IConfiguracaoSiteApp app) : BaseControll
         return Ok(resultado);
     }
 
-    [HttpGet("verificar-dominio")]
-    public IActionResult VerificarDominio([FromQuery] string dominio)
-    {
-        var autorizado = _app.VerificarDominio(dominio);
-        return Ok(new { autorizado });
-    }
 }

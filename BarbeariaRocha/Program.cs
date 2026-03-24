@@ -26,6 +26,18 @@ builder.Services.Configure<TenantOptions>(
 );
 builder.Services.AddScoped<ITenantService, TenantService>();
 
+// -------------------- TENANT VALIDATION (API EXTERNA) --------------------
+
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<ITenantValidationService, TenantValidationService>();
+builder.Services.AddHttpClient("TenantValidation", client =>
+{
+    var baseUrl = builder.Configuration["Apis:ConfiguracaoBaseUrl"]
+        ?? throw new InvalidOperationException("Apis:ConfiguracaoBaseUrl não está configurado.");
+    client.BaseAddress = new Uri(baseUrl);
+    client.Timeout = TimeSpan.FromSeconds(2);
+});
+
 // -------------------- DATABASE --------------------
 
 // O DbContext resolve a connection string do tenant atual em cada requisição.
@@ -129,6 +141,7 @@ var app = builder.Build();
 // -------------------- MIDDLEWARE --------------------
 
 app.UseMiddleware<ExceptionMiddleware>();
+app.UseMiddleware<TenantValidationMiddleware>();
 app.UseMiddleware<TenantMiddleware>();
 
 // -------------------- PIPELINE --------------------

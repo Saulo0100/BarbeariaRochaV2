@@ -1,4 +1,5 @@
 using BarbeariaRocha.Aplicacao.Contratos;
+using BarbeariaRocha.Modelos.Request.Adicional;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -47,11 +48,5 @@ namespace BarbeariaRocha.Controllers
             _app.DeletarAdicional(id);
             return NoContent();
         }
-    }
-
-    public class AdicionalCriarRequest
-    {
-        public required string Nome { get; set; }
-        public decimal Valor { get; set; }
     }
 }
