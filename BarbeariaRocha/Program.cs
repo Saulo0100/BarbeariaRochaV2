@@ -72,14 +72,8 @@ builder.Services.AddScoped<IRelatorioApp, RelatorioApp>();
 builder.Services.AddScoped<IHorarioApp, HorarioApp>();
 builder.Services.AddScoped<IConfiguracaoHorarioApp, ConfiguracaoHorarioApp>();
 builder.Services.AddScoped<IAdicionalApp, AdicionalApp>();
-builder.Services.AddScoped<IConfiguracaoSiteApp, ConfiguracaoSiteApp>();
+builder.Services.AddScoped<IConfiguracaoBarbeariaApp, ConfiguracaoBarbeariaApp>();
 builder.Services.AddSingleton<TokenProvider>();
-
-builder.Services.AddHttpClient<IConfiguracaoSiteApp, ConfiguracaoSiteApp>(client =>
-{
-    var baseUrl = builder.Configuration["Apis:ConfiguracaoBaseUrl"] ?? throw new Exception("Sso Api not configured");
-    client.BaseAddress = new Uri(baseUrl);
-});
 
 // -------------------- JWT --------------------
 
