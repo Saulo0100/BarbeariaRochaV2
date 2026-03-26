@@ -1,6 +1,7 @@
 using BarbeariaRocha.Aplicacao.Contratos;
 using BarbeariaRocha.Aplicacao.Helper;
 using BarbeariaRocha.Infraestrutura.Contexto;
+using BarbeariaRocha.Modelos.Entidades;
 using BarbeariaRocha.Modelos.Enums;
 using BarbeariaRocha.Modelos.Response.Horario;
 using System.Globalization;
@@ -14,9 +15,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         public HorariosDisponiveisResponse ObterHorariosDisponiveis(int barbeiroId, DateTime data)
         {
             var diaSemana = CultureInfo.GetCultureInfo("pt-BR").DateTimeFormat.GetDayName(data.DayOfWeek);
-            var aberto = HelperGenerico.BarbeariaAberta(data);
+            var config = ObterConfigDia(data);
 
-            if (!aberto)
+            if (!config.Aberto)
             {
                 return new HorariosDisponiveisResponse
                 {
@@ -46,8 +47,8 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 };
             }
 
-            var todosHorarios = HelperGenerico.ObterHorariosPorData(data);
-            todosHorarios = FiltrarPorPeriodoTrabalho(todosHorarios, barbeiroId);
+            var todosHorarios = HelperGenerico.MontarHorariosPorConfig(config);
+            todosHorarios = FiltrarPorPeriodoTrabalho(todosHorarios, barbeiroId, config);
             var horariosOcupados = ObterHorariosOcupados(barbeiroId, data);
 
             var agora = DateTime.Now;
@@ -71,10 +72,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         public HorariosDisponiveisServicoResponse ObterHorariosDisponiveisPorServico(int barbeiroId, DateTime data, int servicoId)
         {
             var diaSemana = CultureInfo.GetCultureInfo("pt-BR").DateTimeFormat.GetDayName(data.DayOfWeek);
-            var aberto = HelperGenerico.BarbeariaAberta(data);
+            var config = ObterConfigDia(data);
             var servico = _contexto.Servico.Find(servicoId) ?? throw new Exception("Serviço não encontrado.");
 
-            if (!aberto)
+            if (!config.Aberto)
             {
                 return new HorariosDisponiveisServicoResponse
                 {
@@ -103,31 +104,25 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 };
             }
 
-            var todosHorarios = HelperGenerico.ObterHorariosPorData(data);
-            todosHorarios = FiltrarPorPeriodoTrabalho(todosHorarios, barbeiroId);
+            var todosHorarios = HelperGenerico.MontarHorariosPorConfig(config);
+            todosHorarios = FiltrarPorPeriodoTrabalho(todosHorarios, barbeiroId, config);
             var horariosOcupados = ObterHorariosOcupados(barbeiroId, data);
             var agora = DateTime.Now;
 
             var tempoTotal = servico.TempoEstimado;
-            var ocupaMaisDeUmSlot = tempoTotal.Hour > 0 || tempoTotal.Minute > 40;
+            var intervaloSlot = config.IntervaloMinutos > 0 ? config.IntervaloMinutos : 40;
+            var tempoTotalMinutos = tempoTotal.Hour * 60 + tempoTotal.Minute;
+            var ocupaMaisDeUmSlot = tempoTotalMinutos > intervaloSlot;
 
             List<string> horariosDisponiveis;
 
             if (servico.RequerDuasEtapas)
             {
-                // Para serviços com 2 etapas (ex: Platinado com Corte):
-                // Mostrar apenas horários onde exista pelo menos 1 horário disponível
-                // com o intervalo mínimo de horas de diferença.
-                // Cada etapa pode ocupar mais de 1 slot se o tempo estimado > 40min.
                 var horariosDisponiveisTimeOnly = FiltrarHorariosDisponiveisTimeOnly(todosHorarios, horariosOcupados, data, agora);
 
                 if (ocupaMaisDeUmSlot)
-                {
-                    // Filtrar para slots consecutivos disponíveis na etapa 1
                     horariosDisponiveisTimeOnly = FiltrarSlotsConsecutivosDisponiveis(horariosDisponiveisTimeOnly, todosHorarios);
-                }
 
-                // Filtrar etapa 1: deve existir pelo menos um horário de etapa 2 válido
                 var horariosEtapa1Validos = new List<TimeOnly>();
                 foreach (var h in horariosDisponiveisTimeOnly)
                 {
@@ -140,14 +135,12 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             }
             else if (ocupaMaisDeUmSlot)
             {
-                // Para serviços de 1h20m: mostrar apenas horários onde 2 slots consecutivos estão disponíveis
                 var horariosDisponiveisTimeOnly = FiltrarHorariosDisponiveisTimeOnly(todosHorarios, horariosOcupados, data, agora);
                 var filtrados = FiltrarSlotsConsecutivosDisponiveis(horariosDisponiveisTimeOnly, todosHorarios);
                 horariosDisponiveis = filtrados.Select(h => h.ToString("HH:mm")).ToList();
             }
             else
             {
-                // Serviço normal de 40min
                 horariosDisponiveis = FiltrarHorariosDisponiveis(todosHorarios, horariosOcupados, data, agora);
             }
 
@@ -176,13 +169,14 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             if (!servico.RequerDuasEtapas)
                 throw new Exception("Este serviço não requer duas etapas.");
 
-            var todosHorarios = HelperGenerico.ObterHorariosPorData(data);
-            todosHorarios = FiltrarPorPeriodoTrabalho(todosHorarios, barbeiroId);
+            var config = ObterConfigDia(data);
+            var todosHorarios = HelperGenerico.MontarHorariosPorConfig(config);
+            todosHorarios = FiltrarPorPeriodoTrabalho(todosHorarios, barbeiroId, config);
             var horariosOcupados = ObterHorariosOcupados(barbeiroId, data);
             var agora = DateTime.Now;
 
-            var tempoTotal = servico.TempoEstimado;
-            var ocupaMaisDeUmSlot = tempoTotal.Hour > 0 || tempoTotal.Minute > 40;
+            var intervaloSlot = config.IntervaloMinutos > 0 ? config.IntervaloMinutos : 40;
+            var ocupaMaisDeUmSlot = (servico.TempoEstimado.Hour * 60 + servico.TempoEstimado.Minute) > intervaloSlot;
 
             var etapa1Time = TimeOnly.Parse(horaEtapa1);
             var horariosEtapa2 = ObterHorariosEtapa2Disponiveis(etapa1Time, todosHorarios, horariosOcupados, servico.IntervaloMinimoHoras, data, agora, ocupaMaisDeUmSlot);
@@ -202,30 +196,26 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public List<string> ObterTodosHorariosPorData(DateTime data)
         {
-            return HelperGenerico.ObterHorariosPorData(data)
+            var config = ObterConfigDia(data);
+            return HelperGenerico.MontarHorariosPorConfig(config)
                 .Select(h => h.ToString("HH:mm"))
                 .ToList();
         }
 
         /// <summary>
         /// Retorna todos os horários válidos para um barbeiro em um dia da semana específico.
-        /// Considera o horário de funcionamento do dia (segunda só tarde, sábado horário diferente)
-        /// e o período de trabalho do barbeiro (manhã/tarde/dia todo).
+        /// Considera a configuração dinâmica do dia e o período de trabalho do barbeiro.
         /// Não filtra por horários ocupados nem por horários passados.
         /// Usado para cadastro de mensalistas.
         /// </summary>
         public List<string> ObterHorariosMensalista(int barbeiroId, int diaSemana)
         {
-            // Criar uma data fictícia para o dia da semana solicitado (usar uma data futura)
-            var hoje = DateTime.Today;
-            var dataReferencia = hoje;
-            while ((int)dataReferencia.DayOfWeek != diaSemana)
-            {
-                dataReferencia = dataReferencia.AddDays(1);
-            }
+            var config = _contexto.ConfiguracaoHorario
+                .FirstOrDefault(c => c.DiaSemana == diaSemana)
+                ?? CriarConfigPadrao(diaSemana);
 
-            var todosHorarios = HelperGenerico.ObterHorariosPorData(dataReferencia);
-            todosHorarios = FiltrarPorPeriodoTrabalho(todosHorarios, barbeiroId);
+            var todosHorarios = HelperGenerico.MontarHorariosPorConfig(config);
+            todosHorarios = FiltrarPorPeriodoTrabalho(todosHorarios, barbeiroId, config);
 
             return todosHorarios
                 .Select(h => h.ToString("HH:mm"))
@@ -235,22 +225,46 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         // ==================== MÉTODOS AUXILIARES ====================
 
         /// <summary>
-        /// Filtra horários com base no período de trabalho do barbeiro (Manhã, Tarde, Dia Todo).
+        /// Obtém a ConfiguracaoHorario do banco para o dia da semana da data informada.
+        /// Se não existir, usa valores padrão para não quebrar o sistema.
         /// </summary>
-        private List<TimeOnly> FiltrarPorPeriodoTrabalho(List<TimeOnly> horarios, int barbeiroId)
+        private ConfiguracaoHorario ObterConfigDia(DateTime data)
+        {
+            var diaSemana = (int)data.DayOfWeek;
+            return _contexto.ConfiguracaoHorario
+                .FirstOrDefault(c => c.DiaSemana == diaSemana)
+                ?? CriarConfigPadrao(diaSemana);
+        }
+
+        /// <summary>
+        /// Fallback com os valores originais hardcoded, caso a tabela ainda não tenha sido populada.
+        /// </summary>
+        private static ConfiguracaoHorario CriarConfigPadrao(int diaSemana) => diaSemana switch
+        {
+            0 => new ConfiguracaoHorario { DiaSemana = 0, Aberto = false, IntervaloMinutos = 40 },
+            1 => new ConfiguracaoHorario { DiaSemana = 1, Aberto = true, HoraInicio = TimeOnly.Parse("13:20"), HoraFim = TimeOnly.Parse("20:00"), IntervaloMinutos = 40 },
+            6 => new ConfiguracaoHorario { DiaSemana = 6, Aberto = true, HoraInicio = TimeOnly.Parse("09:00"), AlmocoInicio = TimeOnly.Parse("12:20"), AlmocoFim = TimeOnly.Parse("13:20"), HoraFim = TimeOnly.Parse("17:20"), IntervaloMinutos = 40 },
+            _ => new ConfiguracaoHorario { DiaSemana = diaSemana, Aberto = true, HoraInicio = TimeOnly.Parse("10:00"), AlmocoInicio = TimeOnly.Parse("11:20"), AlmocoFim = TimeOnly.Parse("13:20"), HoraFim = TimeOnly.Parse("20:00"), IntervaloMinutos = 40 }
+        };
+
+        /// <summary>
+        /// Filtra horários com base no período de trabalho do barbeiro (Manhã, Tarde, Dia Todo).
+        /// O divisor manhã/tarde é o AlmocoFim do dia, ou HoraInicio se não houver almoço.
+        /// </summary>
+        private List<TimeOnly> FiltrarPorPeriodoTrabalho(List<TimeOnly> horarios, int barbeiroId, ConfiguracaoHorario config)
         {
             var barbeiro = _contexto.Usuario.Find(barbeiroId);
             if (barbeiro == null || string.IsNullOrEmpty(barbeiro.PeriodoTrabalho) || barbeiro.PeriodoTrabalho == "DiaTodo")
                 return horarios;
 
-            // Horário de almoço como divisor: manhã = antes de 13:20, tarde = a partir de 13:20
-            var almocoFim = new TimeOnly(13, 20);
+            // Divisor: fim do almoço (retorno), ou início do expediente se não houver almoço
+            var divisor = config.AlmocoFim ?? config.HoraInicio ?? new TimeOnly(13, 20);
 
             if (barbeiro.PeriodoTrabalho == "Manha")
-                return horarios.Where(h => h < almocoFim).ToList();
+                return horarios.Where(h => h < divisor).ToList();
 
             if (barbeiro.PeriodoTrabalho == "Tarde")
-                return horarios.Where(h => h >= almocoFim).ToList();
+                return horarios.Where(h => h >= divisor).ToList();
 
             return horarios;
         }
@@ -302,7 +316,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         /// <summary>
         /// Filtra horários que possuem o próximo slot consecutivo também disponível.
-        /// Usado para serviços de 1h20m que ocupam 2 slots.
+        /// Usado para serviços que ocupam mais de um slot.
         /// </summary>
         private static List<TimeOnly> FiltrarSlotsConsecutivosDisponiveis(List<TimeOnly> horariosDisponiveis, List<TimeOnly> todosHorarios)
         {
@@ -316,9 +330,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 {
                     var proximoSlot = todosHorarios[idx + 1];
                     if (disponiveisSet.Contains(proximoSlot))
-                    {
                         resultado.Add(h);
-                    }
                 }
             }
 
@@ -339,8 +351,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         {
             var minimoEtapa2 = etapa1Time.AddHours(intervaloMinimoHoras);
 
-            // Se o horário mínimo da etapa 2 ultrapassar meia-noite (overflow do TimeOnly),
-            // não há horário válido no mesmo dia para a etapa 2.
+            // Se o horário mínimo da etapa 2 ultrapassar meia-noite, não há horário válido no mesmo dia.
             if (minimoEtapa2 <= etapa1Time)
                 return new List<TimeOnly>();
 
@@ -358,10 +369,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 .ToList();
 
             if (ocupaMaisDeUmSlot)
-            {
-                // Para serviços que ocupam mais de um slot, a etapa 2 também precisa de slots consecutivos
                 disponiveisEtapa2 = FiltrarSlotsConsecutivosDisponiveis(disponiveisEtapa2, todosHorarios);
-            }
 
             return disponiveisEtapa2;
         }

@@ -70,6 +70,7 @@ builder.Services.AddScoped<IMensalistaApp, MensalistaApp>();
 builder.Services.AddScoped<ITestesApp, TestesApp>();
 builder.Services.AddScoped<IRelatorioApp, RelatorioApp>();
 builder.Services.AddScoped<IHorarioApp, HorarioApp>();
+builder.Services.AddScoped<IConfiguracaoHorarioApp, ConfiguracaoHorarioApp>();
 builder.Services.AddScoped<IAdicionalApp, AdicionalApp>();
 builder.Services.AddScoped<IConfiguracaoSiteApp, ConfiguracaoSiteApp>();
 builder.Services.AddSingleton<TokenProvider>();
