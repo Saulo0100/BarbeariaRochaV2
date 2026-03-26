@@ -1,6 +1,7 @@
 using BarbeariaRocha.Aplicacao.Contratos;
 using BarbeariaRocha.Aplicacao.Helper;
 using BarbeariaRocha.Infraestrutura.Contexto;
+using BarbeariaRocha.Infraestrutura.MultiTenancy;
 using BarbeariaRocha.Modelos.Entidades;
 using BarbeariaRocha.Modelos.Enums;
 using BarbeariaRocha.Modelos.Response.Horario;
@@ -8,9 +9,10 @@ using System.Globalization;
 
 namespace BarbeariaRocha.Aplicacao.Servicos
 {
-    public class HorarioApp(Contexto contexto) : IHorarioApp
+    public class HorarioApp(Contexto contexto, ITenantService tenantService) : IHorarioApp
     {
         private readonly Contexto _contexto = contexto;
+        private readonly ITenantService _tenantService = tenantService;
 
         public HorariosDisponiveisResponse ObterHorariosDisponiveis(int barbeiroId, DateTime data)
         {
@@ -30,8 +32,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             }
 
             // Verificar excecoes para essa data
+            var tenantId = _tenantService.ObterTenantId();
             var existeExcecao = _contexto.Excecao
-                .Any(e => !e.Excluido &&
+                .Any(e => e.TenantId == tenantId &&
+                         !e.Excluido &&
                          e.Data.Date == data.Date &&
                          (e.BarbeiroId == null || e.BarbeiroId == barbeiroId));
 
@@ -87,8 +91,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 };
             }
 
+            var tenantId = _tenantService.ObterTenantId();
             var existeExcecao = _contexto.Excecao
-                .Any(e => !e.Excluido &&
+                .Any(e => e.TenantId == tenantId &&
+                         !e.Excluido &&
                          e.Data.Date == data.Date &&
                          (e.BarbeiroId == null || e.BarbeiroId == barbeiroId));
 
@@ -210,8 +216,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         /// </summary>
         public List<string> ObterHorariosMensalista(int barbeiroId, int diaSemana)
         {
+            var tenantIdMensalista = _tenantService.ObterTenantId();
             var config = _contexto.ConfiguracaoHorario
-                .FirstOrDefault(c => c.DiaSemana == diaSemana)
+                .FirstOrDefault(c => c.TenantId == tenantIdMensalista && c.DiaSemana == diaSemana)
                 ?? CriarConfigPadrao(diaSemana);
 
             var todosHorarios = HelperGenerico.MontarHorariosPorConfig(config);
@@ -231,8 +238,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         private ConfiguracaoHorario ObterConfigDia(DateTime data)
         {
             var diaSemana = (int)data.DayOfWeek;
+            var tenantIdConfig = _tenantService.ObterTenantId();
             return _contexto.ConfiguracaoHorario
-                .FirstOrDefault(c => c.DiaSemana == diaSemana)
+                .FirstOrDefault(c => c.TenantId == tenantIdConfig && c.DiaSemana == diaSemana)
                 ?? CriarConfigPadrao(diaSemana);
         }
 
@@ -253,7 +261,8 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         /// </summary>
         private List<TimeOnly> FiltrarPorPeriodoTrabalho(List<TimeOnly> horarios, int barbeiroId, ConfiguracaoHorario config)
         {
-            var barbeiro = _contexto.Usuario.Find(barbeiroId);
+            var tenantIdBarbeiro = _tenantService.ObterTenantId();
+            var barbeiro = _contexto.Usuario.FirstOrDefault(u => u.Id == barbeiroId && u.TenantId == tenantIdBarbeiro);
             if (barbeiro == null || string.IsNullOrEmpty(barbeiro.PeriodoTrabalho) || barbeiro.PeriodoTrabalho == "DiaTodo")
                 return horarios;
 
@@ -271,8 +280,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         private HashSet<TimeOnly> ObterHorariosOcupados(int barbeiroId, DateTime data)
         {
+            var tenantIdOcupados = _tenantService.ObterTenantId();
             var agendamentos = _contexto.Agendamento
-                .Where(a => a.BarbeiroId == barbeiroId &&
+                .Where(a => a.TenantId == tenantIdOcupados &&
+                           a.BarbeiroId == barbeiroId &&
                            a.DataHora.Date == data.Date &&
                            a.Status != AgendamentoStatus.CanceladoPeloCliente.ToString() &&
                            a.Status != AgendamentoStatus.CanceladoPeloBarbeiro.ToString())

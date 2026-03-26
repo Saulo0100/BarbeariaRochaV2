@@ -1,5 +1,6 @@
 ﻿using BarbeariaRocha.Aplicacao.Contratos;
 using BarbeariaRocha.Infraestrutura.Contexto;
+using BarbeariaRocha.Infraestrutura.MultiTenancy;
 using BarbeariaRocha.Modelos.Entidades;
 using BarbeariaRocha.Modelos.Enums;
 using BarbeariaRocha.Modelos.Paginacao;
@@ -9,10 +10,11 @@ using BarbeariaRocha.Modelos.Response.Usuario;
 
 namespace BarbeariaRocha.Aplicacao.Servicos
 {
-    public class UsuarioApp(Contexto contexto, IEmailApp emailApp) : IUsuarioApp
+    public class UsuarioApp(Contexto contexto, IEmailApp emailApp, ITenantService tenantService) : IUsuarioApp
     {
         public readonly Contexto _contexto = contexto;
         private readonly IEmailApp _emailApp = emailApp;
+        private readonly ITenantService _tenantService = tenantService;
 
         public void Criar(UsuarioCriarRequest request)
         {
@@ -20,11 +22,14 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             if (request.Perfil != Perfil.Cliente)
                 throw new Exception("Apenas clientes podem se cadastrar.");
 
-            var existente = _contexto.Usuario.FirstOrDefault(u => u.Numero == request.Numero && !u.Excluido);
+            var tenantId = _tenantService.ObterTenantId();
+
+            var existente = _contexto.Usuario.FirstOrDefault(u => u.TenantId == tenantId && u.Numero == request.Numero && !u.Excluido);
             if (existente != null)
                 throw new Exception("Já existe um usuário com este número.");
 
             var usuario = new Usuario(request);
+            usuario.TenantId = tenantId;
             _contexto.Usuario.Add(usuario);
             _contexto.SaveChanges();
 
@@ -41,11 +46,14 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public void CriarComoAdmin(UsuarioCriarRequest request)
         {
-            var existente = _contexto.Usuario.FirstOrDefault(u => u.Numero == request.Numero && !u.Excluido);
+            var tenantId = _tenantService.ObterTenantId();
+
+            var existente = _contexto.Usuario.FirstOrDefault(u => u.TenantId == tenantId && u.Numero == request.Numero && !u.Excluido);
             if (existente != null)
                 throw new Exception("Já existe um usuário com este número.");
 
             var usuario = new Usuario(request);
+            usuario.TenantId = tenantId;
 
             // Usuário criado pelo barbeiro/admin já tem email confirmado automaticamente
             usuario.EmailConfirmado = true;
@@ -69,7 +77,8 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public void ConfirmarEmail(string token)
         {
-            var usuario = _contexto.Usuario.FirstOrDefault(u => u.TokenConfirmacao == token && !u.Excluido)
+            var tenantId = _tenantService.ObterTenantId();
+            var usuario = _contexto.Usuario.FirstOrDefault(u => u.TenantId == tenantId && u.TokenConfirmacao == token && !u.Excluido)
                 ?? throw new Exception("Token inválido ou expirado.");
 
             usuario.EmailConfirmado = true;
@@ -117,16 +126,15 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public void EditarPorcentagem(int id, decimal porcentagem)
         {
-            var usuario = _contexto.Usuario.Find(id) ?? throw new Exception("Usuário não encontrado.");
+            var tenantId = _tenantService.ObterTenantId();
+            var usuario = _contexto.Usuario.FirstOrDefault(u => u.Id == id && u.TenantId == tenantId) ?? throw new Exception("Usuário não encontrado.");
             if (porcentagem < 0 || porcentagem > 100)
                 throw new ArgumentException("A porcentagem deve estar entre 0 e 100.");
 
-            // Antes de alterar, gravar a porcentagem antiga em todos os agendamentos
-            // concluídos que ainda não têm PorcentagemAdminNaEpoca preenchida,
-            // para não perder a referência histórica.
             var porcentagemAntiga = usuario.Porcentagem ?? 0;
             var agendamentosSemHistorico = _contexto.Agendamento
-                .Where(a => a.BarbeiroId == id
+                .Where(a => a.TenantId == tenantId
+                    && a.BarbeiroId == id
                     && a.Status == "Concluido"
                     && a.PorcentagemAdminNaEpoca == null)
                 .ToList();
@@ -142,8 +150,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public IEnumerable<BarbeirosDetalhesResponse> ObterBarbeiros()
         {
+            var tenantId = _tenantService.ObterTenantId();
             var perfisBarbeiro = new[] { Perfil.Barbeiro.ToString(), Perfil.BarbeiroAdministrador.ToString() };
-            var barbeiros = _contexto.Usuario.Where(u => perfisBarbeiro.Contains(u.Perfil) && !u.Excluido).ToList();
+            var barbeiros = _contexto.Usuario.Where(u => u.TenantId == tenantId && perfisBarbeiro.Contains(u.Perfil) && !u.Excluido).ToList();
             return barbeiros.Select(b => new BarbeirosDetalhesResponse
             {
                 Id = b.Id,
@@ -173,7 +182,8 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public PaginacaoResultado<UsuarioDetalhesResponse> ObterTodos(PaginacaoFiltro<UsuarioFiltroRequest> filtro)
         {
-            var query = _contexto.Usuario.Where(u => !u.Excluido).AsQueryable();
+            var tenantId = _tenantService.ObterTenantId();
+            var query = _contexto.Usuario.Where(u => u.TenantId == tenantId && !u.Excluido).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(filtro.Filtro?.Nome))
                 query = query.Where(u => u.Nome.ToUpper().Contains(filtro.Filtro.Nome.ToUpper()));

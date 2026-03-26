@@ -14,5 +14,5 @@ public class TenantService(IHttpContextAccessor httpContextAccessor) : ITenantSe
             ?? throw new InvalidOperationException("Tenant não foi resolvido para esta requisição. Certifique-se de que o TenantMiddleware está registrado no pipeline.");
     }
 
-    public string ObterConnectionString() => ObterTenantAtual().ConnectionString;
+    public string ObterTenantId() => ObterTenantAtual().TenantId;
 }

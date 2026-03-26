@@ -1,5 +1,6 @@
 ﻿using BarbeariaRocha.Aplicacao.Contratos;
 using BarbeariaRocha.Infraestrutura.Contexto;
+using BarbeariaRocha.Infraestrutura.MultiTenancy;
 using BarbeariaRocha.Modelos.Entidades;
 using BarbeariaRocha.Modelos.Enums;
 using BarbeariaRocha.Modelos.Paginacao;
@@ -8,9 +9,10 @@ using BarbeariaRocha.Modelos.Response.Servico;
 
 namespace BarbeariaRocha.Aplicacao.Servicos
 {
-    public class ServicoApp(Contexto contexto) : IServicoApp
+    public class ServicoApp(Contexto contexto, ITenantService tenantService) : IServicoApp
     {
         private readonly Contexto _contexto = contexto;
+        private readonly ITenantService _tenantService = tenantService;
 
         public void CriarServico(ServicoCriarRequest request)
         {
@@ -26,8 +28,11 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             if (!Enum.IsDefined(typeof(CategoriaServico), request.Categoria))
                 throw new ArgumentException("A categoria é obrigatória e deve ser válida.");
 
+            var tenantId = _tenantService.ObterTenantId();
+
             var servico = new Servico
             {
+                TenantId = tenantId,
                 Descricao = request.Descricao,
                 Valor = request.Valor,
                 TempoEstimado = TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(request.TempoEstimado)),
@@ -40,7 +45,8 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public void DeletarServico(int id)
         {
-            var servico = _contexto.Servico.Find(id) ?? throw new Exception("Serviço não encontrado.");
+            var tenantId = _tenantService.ObterTenantId();
+            var servico = _contexto.Servico.FirstOrDefault(s => s.Id == id && s.TenantId == tenantId) ?? throw new Exception("Serviço não encontrado.");
             servico.Excluido = true;
             _contexto.SaveChanges();
         }
@@ -50,8 +56,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             if (filtro == null)
                 throw new ArgumentNullException(nameof(filtro));
 
+            var tenantId = _tenantService.ObterTenantId();
+
             var query = _contexto.Servico
-                .Where(s => s.Excluido == false);
+                .Where(s => s.TenantId == tenantId && s.Excluido == false);
 
             if (filtro.Filtro != null)
             {

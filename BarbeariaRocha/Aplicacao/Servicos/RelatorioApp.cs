@@ -1,5 +1,6 @@
 using BarbeariaRocha.Aplicacao.Contratos;
 using BarbeariaRocha.Infraestrutura.Contexto;
+using BarbeariaRocha.Infraestrutura.MultiTenancy;
 using BarbeariaRocha.Modelos.Entidades;
 using BarbeariaRocha.Modelos.Enums;
 using BarbeariaRocha.Modelos.Request.Relatorio;
@@ -8,13 +9,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BarbeariaRocha.Aplicacao.Servicos
 {
-    public class RelatorioApp(Contexto contexto) : IRelatorioApp
+    public class RelatorioApp(Contexto contexto, ITenantService tenantService) : IRelatorioApp
     {
         private readonly Contexto _contexto = contexto;
+        private readonly ITenantService _tenantService = tenantService;
 
         public RelatorioGeralResponse ObterRelatorioGeral(RelatorioFiltroRequest filtro)
         {
+            var tenantId = _tenantService.ObterTenantId();
             var query = _contexto.Agendamento
+                .Where(a => a.TenantId == tenantId)
                 .Where(a => a.Status != AgendamentoStatus.SlotReservado.ToString())
                 .Where(a => a.AgendamentoPrincipalId == null) // Excluir etapas secundárias (evita contar 2x)
                 .AsQueryable();
@@ -105,7 +109,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public IEnumerable<ServicoMaisPedidoResponse> ObterServicosMaisPedidos(RelatorioFiltroRequest filtro, int top = 10)
         {
+            var tenantId = _tenantService.ObterTenantId();
             var query = _contexto.Agendamento
+                .Where(a => a.TenantId == tenantId)
                 .Where(a => a.Status == AgendamentoStatus.Concluido.ToString() && a.ServicoId.HasValue)
                 .Where(a => a.AgendamentoPrincipalId == null) // Excluir etapas secundárias
                 .AsQueryable();
@@ -146,7 +152,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public IEnumerable<ClienteFrequenteResponse> ObterClientesFrequentes(RelatorioFiltroRequest filtro, int top = 10)
         {
+            var tenantId = _tenantService.ObterTenantId();
             var query = _contexto.Agendamento
+                .Where(a => a.TenantId == tenantId)
                 .Where(a => a.Status == AgendamentoStatus.Concluido.ToString())
                 .Where(a => a.AgendamentoPrincipalId == null) // Excluir etapas secundárias
                 .AsQueryable();
@@ -186,7 +194,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public IEnumerable<FaturamentoPorPeriodoResponse> ObterFaturamentoDiario(RelatorioFiltroRequest filtro)
         {
+            var tenantId = _tenantService.ObterTenantId();
             var query = _contexto.Agendamento
+                .Where(a => a.TenantId == tenantId)
                 .Where(a => a.Status == AgendamentoStatus.Concluido.ToString())
                 .Where(a => a.AgendamentoPrincipalId == null) // Excluir etapas secundárias
                 .AsQueryable();
@@ -219,7 +229,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public IEnumerable<FaturamentoPorMetodoResponse> ObterFaturamentoPorMetodo(RelatorioFiltroRequest filtro)
         {
+            var tenantId = _tenantService.ObterTenantId();
             var query = _contexto.Agendamento
+                .Where(a => a.TenantId == tenantId)
                 .Where(a => a.Status == AgendamentoStatus.Concluido.ToString() && a.MetodoPagamento != null)
                 .Where(a => a.AgendamentoPrincipalId == null) // Excluir etapas secundárias
                 .AsQueryable();
@@ -254,7 +266,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public IEnumerable<RelatorioBarbeiroResponse> ObterRelatorioPorBarbeiro(RelatorioFiltroRequest filtro)
         {
+            var tenantId = _tenantService.ObterTenantId();
             var query = _contexto.Agendamento
+                .Where(a => a.TenantId == tenantId)
                 .Where(a => a.Status != AgendamentoStatus.SlotReservado.ToString())
                 .Where(a => a.AgendamentoPrincipalId == null) // Excluir etapas secundárias
                 .AsQueryable();
@@ -268,6 +282,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             var agendamentos = query.ToList();
 
             var barbeiros = _contexto.Usuario
+                .Where(u => u.TenantId == tenantId)
                 .Where(u => u.Perfil == Perfil.Barbeiro.ToString() || u.Perfil == Perfil.BarbeiroAdministrador.ToString())
                 .Where(u => !u.Excluido)
                 .ToList();
@@ -338,8 +353,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             var relatorio = ObterRelatorioGeral(filtro);
 
             // Calcular comissão usando porcentagem histórica por agendamento
+            var tenantId = _tenantService.ObterTenantId();
             var queryBarbeiro = _contexto.Agendamento
-                .Where(a => a.BarbeiroId == barbeiroId && a.Status == AgendamentoStatus.Concluido.ToString())
+                .Where(a => a.TenantId == tenantId && a.BarbeiroId == barbeiroId && a.Status == AgendamentoStatus.Concluido.ToString())
                 .Where(a => a.AgendamentoPrincipalId == null)
                 .AsQueryable();
 

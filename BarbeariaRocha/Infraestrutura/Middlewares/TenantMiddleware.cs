@@ -24,13 +24,13 @@ public class TenantMiddleware(RequestDelegate next, IOptions<TenantOptions> tena
             return;
         }
 
-        if (!tenantOptions.Value.Dominios.TryGetValue(dominio, out var connectionString))
+        if (!tenantOptions.Value.Dominios.TryGetValue(dominio, out var tenantId))
         {
             await ResponderErro(context, StatusCodes.Status400BadRequest, $"Domínio '{dominio}' não está cadastrado.");
             return;
         }
 
-        context.Items[TenantService.TenantKey] = new TenantInfo(dominio, connectionString);
+        context.Items[TenantService.TenantKey] = new TenantInfo(dominio, tenantId);
 
         await next(context);
     }

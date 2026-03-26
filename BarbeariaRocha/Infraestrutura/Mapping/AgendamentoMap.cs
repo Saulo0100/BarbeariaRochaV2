@@ -10,6 +10,10 @@ public class AgendamentoMap : IEntityTypeConfiguration<Agendamento>
 
         builder.HasKey(x => x.Id);
 
+        builder.Property(x => x.TenantId)
+            .IsRequired()
+            .HasMaxLength(100);
+
         builder.Property(x => x.NomeCliente)
             .IsRequired()
             .HasMaxLength(150);

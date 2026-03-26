@@ -1,18 +1,21 @@
 using BarbeariaRocha.Aplicacao.Contratos;
 using BarbeariaRocha.Infraestrutura.Contexto;
+using BarbeariaRocha.Infraestrutura.MultiTenancy;
 using BarbeariaRocha.Modelos.Entidades;
 using BarbeariaRocha.Modelos.Request.ConfiguracaoBarbearia;
 using BarbeariaRocha.Modelos.Response.ConfiguracaoBarbearia;
 
 namespace BarbeariaRocha.Aplicacao.Servicos
 {
-    public class ConfiguracaoBarbeariaApp(Contexto contexto) : IConfiguracaoBarbeariaApp
+    public class ConfiguracaoBarbeariaApp(Contexto contexto, ITenantService tenantService) : IConfiguracaoBarbeariaApp
     {
         private readonly Contexto _contexto = contexto;
+        private readonly ITenantService _tenantService = tenantService;
 
         public ConfiguracaoBarbeariaResponse Obter()
         {
-            var config = _contexto.ConfiguracaoBarbearia.FirstOrDefault()
+            var tenantId = _tenantService.ObterTenantId();
+            var config = _contexto.ConfiguracaoBarbearia.FirstOrDefault(c => c.TenantId == tenantId)
                 ?? throw new Exception("Configuração da barbearia não encontrada.");
 
             return Mapear(config);
@@ -20,11 +23,14 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public ConfiguracaoBarbeariaResponse Criar(ConfiguracaoBarbeariaRequest request)
         {
-            if (_contexto.ConfiguracaoBarbearia.Any())
+            var tenantId = _tenantService.ObterTenantId();
+
+            if (_contexto.ConfiguracaoBarbearia.Any(c => c.TenantId == tenantId))
                 throw new Exception("Já existe uma configuração cadastrada. Use o endpoint de edição.");
 
             var config = new ConfiguracaoBarbearia
             {
+                TenantId = tenantId,
                 NumeroCelular = request.NumeroCelular,
                 Rua = request.Rua,
                 Bairro = request.Bairro,
@@ -41,7 +47,8 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public ConfiguracaoBarbeariaResponse Editar(int id, ConfiguracaoBarbeariaRequest request)
         {
-            var config = _contexto.ConfiguracaoBarbearia.Find(id)
+            var tenantId = _tenantService.ObterTenantId();
+            var config = _contexto.ConfiguracaoBarbearia.FirstOrDefault(c => c.Id == id && c.TenantId == tenantId)
                 ?? throw new Exception("Configuração não encontrada.");
 
             config.NumeroCelular = request.NumeroCelular;
@@ -58,7 +65,8 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public void Deletar(int id)
         {
-            var config = _contexto.ConfiguracaoBarbearia.Find(id)
+            var tenantId = _tenantService.ObterTenantId();
+            var config = _contexto.ConfiguracaoBarbearia.FirstOrDefault(c => c.Id == id && c.TenantId == tenantId)
                 ?? throw new Exception("Configuração não encontrada.");
 
             _contexto.ConfiguracaoBarbearia.Remove(config);

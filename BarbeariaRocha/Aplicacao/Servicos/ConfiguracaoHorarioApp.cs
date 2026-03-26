@@ -1,5 +1,6 @@
 using BarbeariaRocha.Aplicacao.Contratos;
 using BarbeariaRocha.Infraestrutura.Contexto;
+using BarbeariaRocha.Infraestrutura.MultiTenancy;
 using BarbeariaRocha.Modelos.Entidades;
 using BarbeariaRocha.Modelos.Request.Horario;
 using BarbeariaRocha.Modelos.Response.Horario;
@@ -7,15 +8,18 @@ using System.Globalization;
 
 namespace BarbeariaRocha.Aplicacao.Servicos
 {
-    public class ConfiguracaoHorarioApp(Contexto contexto) : IConfiguracaoHorarioApp
+    public class ConfiguracaoHorarioApp(Contexto contexto, ITenantService tenantService) : IConfiguracaoHorarioApp
     {
         private readonly Contexto _contexto = contexto;
+        private readonly ITenantService _tenantService = tenantService;
 
         private static readonly string[] NomesDias = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
 
         public List<ConfiguracaoHorarioResponse> ListarTodos()
         {
+            var tenantId = _tenantService.ObterTenantId();
             return _contexto.ConfiguracaoHorario
+                .Where(c => c.TenantId == tenantId)
                 .OrderBy(c => c.DiaSemana)
                 .ToList()
                 .Select(MapearResponse)
@@ -24,8 +28,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public ConfiguracaoHorarioResponse ObterPorDiaSemana(int diaSemana)
         {
+            var tenantId = _tenantService.ObterTenantId();
             var config = _contexto.ConfiguracaoHorario
-                .FirstOrDefault(c => c.DiaSemana == diaSemana)
+                .FirstOrDefault(c => c.TenantId == tenantId && c.DiaSemana == diaSemana)
                 ?? throw new Exception($"Configuração para o dia {diaSemana} não encontrada.");
 
             return MapearResponse(config);
@@ -35,12 +40,14 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         {
             ValidarRequest(request);
 
+            var tenantId = _tenantService.ObterTenantId();
+
             var config = _contexto.ConfiguracaoHorario
-                .FirstOrDefault(c => c.DiaSemana == request.DiaSemana);
+                .FirstOrDefault(c => c.TenantId == tenantId && c.DiaSemana == request.DiaSemana);
 
             if (config == null)
             {
-                config = new ConfiguracaoHorario { DiaSemana = request.DiaSemana };
+                config = new ConfiguracaoHorario { TenantId = tenantId, DiaSemana = request.DiaSemana };
                 _contexto.ConfiguracaoHorario.Add(config);
             }
 
@@ -53,14 +60,16 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             foreach (var request in requests)
                 ValidarRequest(request);
 
+            var tenantId = _tenantService.ObterTenantId();
+
             foreach (var request in requests)
             {
                 var config = _contexto.ConfiguracaoHorario
-                    .FirstOrDefault(c => c.DiaSemana == request.DiaSemana);
+                    .FirstOrDefault(c => c.TenantId == tenantId && c.DiaSemana == request.DiaSemana);
 
                 if (config == null)
                 {
-                    config = new ConfiguracaoHorario { DiaSemana = request.DiaSemana };
+                    config = new ConfiguracaoHorario { TenantId = tenantId, DiaSemana = request.DiaSemana };
                     _contexto.ConfiguracaoHorario.Add(config);
                 }
 

@@ -1,5 +1,6 @@
 ﻿using BarbeariaRocha.Aplicacao.Contratos;
 using BarbeariaRocha.Infraestrutura.Contexto;
+using BarbeariaRocha.Infraestrutura.MultiTenancy;
 using BarbeariaRocha.Modelos.Entidades;
 using BarbeariaRocha.Modelos.Enums;
 using BarbeariaRocha.Modelos.Request.Mensalista;
@@ -8,14 +9,17 @@ using System.Globalization;
 
 namespace BarbeariaRocha.Aplicacao.Servicos
 {
-    public class MensalistaApp(Contexto contexto) : IMensalistaApp
+    public class MensalistaApp(Contexto contexto, ITenantService tenantService) : IMensalistaApp
     {
         private readonly Contexto _contexto = contexto;
+        private readonly ITenantService _tenantService = tenantService;
 
         public void CadastrarMensalista(MensalistaCriarRequest request, int idUsuario)
         {
             ValidarDadosMensalista(request);
             Usuario.ValidarNumero(request.Numero);
+
+            var tenantId = _tenantService.ObterTenantId();
 
             var dia = CultureInfo
                     .GetCultureInfo("pt-BR")
@@ -26,7 +30,8 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             if (request.BarbeiroId.HasValue && !string.IsNullOrEmpty(request.Horario))
             {
                 var duplicado = _contexto.Mensalista
-                    .Any(m => m.BarbeiroId == request.BarbeiroId.Value
+                    .Any(m => m.TenantId == tenantId
+                        && m.BarbeiroId == request.BarbeiroId.Value
                         && m.Dia == dia
                         && m.Horario == request.Horario
                         && m.Status == MensalistaStatus.Ativo.ToString());
@@ -37,6 +42,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
             var mensalista = new Mensalista
             {
+                TenantId = tenantId,
                 Nome = request.Nome,
                 Numero = request.Numero,
                 Valor = request.Valor,
@@ -60,14 +66,16 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public void CancelarMensalista(int idMensalista)
         {
-            var mensalista = _contexto.Mensalista.Find(idMensalista)
+            var tenantId = _tenantService.ObterTenantId();
+            var mensalista = _contexto.Mensalista.FirstOrDefault(m => m.Id == idMensalista && m.TenantId == tenantId)
                 ?? throw new Exception("Mensalista não encontrado.");
 
             // Cancelar agendamentos futuros auto-gerados deste mensalista
             var agora = DateTime.Now;
             var prefixo = $"Mensalista: {mensalista.Nome}";
             var agendamentosFuturos = _contexto.Agendamento
-                .Where(a => a.NomeCliente == prefixo
+                .Where(a => a.TenantId == tenantId
+                    && a.NomeCliente == prefixo
                     && a.NumeroCliente == mensalista.Numero
                     && a.DataHora > agora
                     && a.Status == AgendamentoStatus.Pendente.ToString())
@@ -84,11 +92,13 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public IEnumerable<MensalistaResponse> ObterTodos()
         {
+            var tenantId = _tenantService.ObterTenantId();
             var inicioMes = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
             var fimMes = inicioMes.AddMonths(1);
             var statusConcluido = AgendamentoStatus.Concluido.ToString();
 
             var mensalistas = _contexto.Mensalista
+                .Where(m => m.TenantId == tenantId)
                 .Select(m => new MensalistaResponse
                 {
                     Id = m.Id,
@@ -132,7 +142,8 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public void RegistrarCorte(MensalistaRegistrarCorteRequest request)
         {
-            var mensalista = _contexto.Mensalista.Find(request.MensalistaId)
+            var tenantId = _tenantService.ObterTenantId();
+            var mensalista = _contexto.Mensalista.FirstOrDefault(m => m.Id == request.MensalistaId && m.TenantId == tenantId)
                 ?? throw new Exception("Mensalista não encontrado.");
 
             if (mensalista.Status != MensalistaStatus.Ativo.ToString())
@@ -140,6 +151,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
             var corte = new MensalistaCorte
             {
+                TenantId = tenantId,
                 MensalistaId = request.MensalistaId,
                 DataCorte = DateTime.SpecifyKind(request.DataCorte, DateTimeKind.Unspecified),
                 Observacao = request.Observacao
@@ -187,8 +199,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         /// </summary>
         public void GerarAgendamentosMensalistas()
         {
+            var tenantId = _tenantService.ObterTenantId();
             var mensalistas = _contexto.Mensalista
-                .Where(m => m.Status == MensalistaStatus.Ativo.ToString()
+                .Where(m => m.TenantId == tenantId
+                    && m.Status == MensalistaStatus.Ativo.ToString()
                     && m.Horario != null
                     && m.BarbeiroId != null)
                 .ToList();
@@ -223,6 +237,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             if (string.IsNullOrEmpty(mensalista.Horario) || !mensalista.BarbeiroId.HasValue)
                 return;
 
+            var tenantId = mensalista.TenantId;
             var horario = TimeOnly.Parse(mensalista.Horario);
             var barbeiroId = mensalista.BarbeiroId.Value;
             var prefixo = $"Mensalista: {mensalista.Nome}";
@@ -257,7 +272,8 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             {
                 // Verificar se já existe agendamento deste mensalista nesta data/hora
                 var jaExisteMensalista = _contexto.Agendamento
-                    .Any(a => a.NomeCliente == prefixo
+                    .Any(a => a.TenantId == tenantId
+                        && a.NomeCliente == prefixo
                         && a.NumeroCliente == mensalista.Numero
                         && a.BarbeiroId == barbeiroId
                         && a.DataHora == dataHora
@@ -268,7 +284,8 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
                 // Verificar se o horário está ocupado por outro agendamento
                 var horarioOcupado = _contexto.Agendamento
-                    .Any(a => a.BarbeiroId == barbeiroId
+                    .Any(a => a.TenantId == tenantId
+                        && a.BarbeiroId == barbeiroId
                         && a.DataHora == dataHora
                         && a.Status != statusCancelado1
                         && a.Status != statusCancelado2);
@@ -277,7 +294,8 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
                 // Verificar se existe exceção para esta data
                 var existeExcecao = _contexto.Excecao
-                    .Any(e => !e.Excluido
+                    .Any(e => e.TenantId == tenantId
+                        && !e.Excluido
                         && e.Data.Date == dataHora.Date
                         && (e.BarbeiroId == null || e.BarbeiroId == barbeiroId));
 
@@ -286,6 +304,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 // Criar o agendamento
                 var agendamento = new Agendamento
                 {
+                    TenantId = tenantId,
                     NomeCliente = prefixo,
                     NumeroCliente = mensalista.Numero,
                     BarbeiroId = barbeiroId,

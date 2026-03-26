@@ -7,6 +7,7 @@ namespace BarbeariaRocha.Modelos.Entidades
     public class ConfiguracaoHorario
     {
         public int Id { get; set; }
+        public string TenantId { get; set; } = string.Empty;
 
         /// <summary>
         /// Dia da semana (0=Domingo, 1=Segunda, ..., 6=Sábado).

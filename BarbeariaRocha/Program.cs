@@ -40,12 +40,10 @@ builder.Services.AddHttpClient("TenantValidation", client =>
 
 // -------------------- DATABASE --------------------
 
-// O DbContext resolve a connection string do tenant atual em cada requisição.
-// A ContextoFactory (design-time) continua usando DefaultConnection para migrations.
+// Banco de dados único — tenant_id nas tabelas identifica cada estabelecimento.
 builder.Services.AddDbContext<Contexto>((serviceProvider, options) =>
 {
-    var tenantService = serviceProvider.GetRequiredService<ITenantService>();
-    options.UseNpgsql(tenantService.ObterConnectionString());
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
 
 // -------------------- CONTROLLERS --------------------

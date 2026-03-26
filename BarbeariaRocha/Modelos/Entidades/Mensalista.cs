@@ -3,6 +3,7 @@
     public class Mensalista
     {
         public int Id { get; set; }
+        public string TenantId { get; set; } = string.Empty;
         public required string Nome { get; set; }
         public required string Numero { get; set; }
         public decimal Valor { get; set; }

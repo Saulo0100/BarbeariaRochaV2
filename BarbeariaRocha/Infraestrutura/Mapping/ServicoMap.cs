@@ -10,6 +10,10 @@ public class ServicoMap : IEntityTypeConfiguration<Servico>
 
         builder.HasKey(x => x.Id);
 
+        builder.Property(x => x.TenantId)
+            .IsRequired()
+            .HasMaxLength(100);
+
         builder.Property(x => x.Descricao)
             .IsRequired()
             .HasMaxLength(200);

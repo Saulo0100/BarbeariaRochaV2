@@ -3,6 +3,7 @@
     public class CodigoConfirmacao
     {
         public int Id { get; set; }
+        public string TenantId { get; set; } = string.Empty;
         public string Numero { get; set; }
         public int Codigo { get; set; }
         public DateTime DtCriacao { get; set; }

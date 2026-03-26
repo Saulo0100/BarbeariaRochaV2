@@ -7,6 +7,7 @@ namespace BarbeariaRocha.Modelos.Entidades
     public class Usuario
     {
         public int Id { get; set; }
+        public string TenantId { get; set; } = string.Empty;
         public required string Nome { get; set; }
         public string? Descricao { get; set; }
         public required string Numero { get; set; }

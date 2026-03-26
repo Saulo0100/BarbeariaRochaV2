@@ -7,6 +7,7 @@ namespace BarbeariaRocha.Modelos.Entidades
     public class Agendamento
     {
         public int Id { get; set; }
+        public string TenantId { get; set; } = string.Empty;
         public int? UsuarioId { get; set; }
         public int BarbeiroId { get; set; }
         public int? ServicoId { get; set; }

@@ -1,5 +1,6 @@
 using BarbeariaRocha.Aplicacao.Contratos;
 using BarbeariaRocha.Infraestrutura.Contexto;
+using BarbeariaRocha.Infraestrutura.MultiTenancy;
 using BarbeariaRocha.Modelos.Entidades;
 using BarbeariaRocha.Modelos.Paginacao;
 using BarbeariaRocha.Modelos.Request.Excecao;
@@ -7,20 +8,24 @@ using BarbeariaRocha.Modelos.Response.Excecao;
 
 namespace BarbeariaRocha.Aplicacao.Servicos
 {
-    public class ExcecaoApp(Contexto contexto) : IExcecaoApp
+    public class ExcecaoApp(Contexto contexto, ITenantService tenantService) : IExcecaoApp
     {
         private readonly Contexto _contexto = contexto;
+        private readonly ITenantService _tenantService = tenantService;
 
         public void CriarExcecao(ExcecaoCriarRequest request)
         {
+            var tenantId = _tenantService.ObterTenantId();
+
             if (request.BarbeiroId.HasValue)
             {
-                var barbeiro = _contexto.Usuario.Find(request.BarbeiroId.Value);
+                var barbeiro = _contexto.Usuario.FirstOrDefault(u => u.Id == request.BarbeiroId.Value && u.TenantId == tenantId);
                 if (barbeiro == null || barbeiro.Excluido)
                     throw new Exception("Barbeiro não encontrado.");
 
                 var excecaoExistente = _contexto.Excecao
-                                        .Where(x => x.BarbeiroId == request.BarbeiroId.Value
+                                        .Where(x => x.TenantId == tenantId
+                                        && x.BarbeiroId == request.BarbeiroId.Value
                                         && x.Data.Date == request.Data.Date)
                                         .FirstOrDefault();
                 if (excecaoExistente != null)
@@ -28,23 +33,24 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
             }
 
-
-
             var excecao = new Excecao(request);
+            excecao.TenantId = tenantId;
             _contexto.Excecao.Add(excecao);
             _contexto.SaveChanges();
         }
 
         public void DeletarExcecao(int id)
         {
-            var excecao = _contexto.Excecao.Find(id) ?? throw new Exception("Exceção não encontrada.");
+            var tenantId = _tenantService.ObterTenantId();
+            var excecao = _contexto.Excecao.FirstOrDefault(e => e.Id == id && e.TenantId == tenantId) ?? throw new Exception("Exceção não encontrada.");
             excecao.Excluido = true;
             _contexto.SaveChanges();
         }
 
         public ExcecaoDetalhesResponse ObterPorId(int id)
         {
-            var excecao = _contexto.Excecao.Find(id) ?? throw new Exception("Exceção não encontrada.");
+            var tenantId = _tenantService.ObterTenantId();
+            var excecao = _contexto.Excecao.FirstOrDefault(e => e.Id == id && e.TenantId == tenantId) ?? throw new Exception("Exceção não encontrada.");
 
             if (excecao.Excluido)
                 throw new Exception("Exceção não encontrada.");
@@ -68,8 +74,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public PaginacaoResultado<ExcecaoDetalhesResponse> ListarExcecoes(PaginacaoFiltro<ExcecaoFiltroRequest> filtro)
         {
+            var tenantId = _tenantService.ObterTenantId();
             var query = _contexto.Excecao
-                .Where(e => e.Excluido == false)
+                .Where(e => e.TenantId == tenantId && e.Excluido == false)
                 .AsQueryable();
 
             if (filtro.Filtro != null)
@@ -130,8 +137,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public IEnumerable<ExcecaoDetalhesResponse> ObterPorBarbeiro(int barbeiroId)
         {
+            var tenantId = _tenantService.ObterTenantId();
             var excecoes = _contexto.Excecao
-                .Where(e => e.Excluido == false
+                .Where(e => e.TenantId == tenantId
+                            && e.Excluido == false
                             && e.BarbeiroId == barbeiroId
                             && e.Data.Date >= DateTime.Today)
                 .ToList();

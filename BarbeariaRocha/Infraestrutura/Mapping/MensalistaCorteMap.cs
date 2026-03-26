@@ -12,6 +12,10 @@ namespace BarbeariaRocha.Infraestrutura.Mapping
 
             builder.HasKey(x => x.Id);
 
+            builder.Property(x => x.TenantId)
+                .IsRequired()
+                .HasMaxLength(100);
+
             builder.Property(x => x.MensalistaId)
                 .IsRequired();
 

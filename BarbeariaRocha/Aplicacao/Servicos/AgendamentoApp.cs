@@ -1,6 +1,7 @@
 ﻿using BarbeariaRocha.Aplicacao.Contratos;
 using BarbeariaRocha.Aplicacao.Helper;
 using BarbeariaRocha.Infraestrutura.Contexto;
+using BarbeariaRocha.Infraestrutura.MultiTenancy;
 using BarbeariaRocha.Modelos.Entidades;
 using BarbeariaRocha.Modelos.Enums;
 using BarbeariaRocha.Modelos.Paginacao;
@@ -10,13 +11,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BarbeariaRocha.Aplicacao.Servicos
 {
-    public class AgendamentoApp(Contexto contexto) : IAgendamentoApp
+    public class AgendamentoApp(Contexto contexto, ITenantService tenantService) : IAgendamentoApp
     {
         private readonly Contexto _contexto = contexto;
+        private readonly ITenantService _tenantService = tenantService;
+
         public AgendamentoDetalheResponse AgendamentoAtual(int barbeiroId)
         {
+            var tenantId = _tenantService.ObterTenantId();
             var agendamento = _contexto.Agendamento
-                .Where(a => a.BarbeiroId == barbeiroId &&
+                .Where(a => a.TenantId == tenantId &&
+                           a.BarbeiroId == barbeiroId &&
                            a.Status != AgendamentoStatus.Concluido.ToString() &&
                            a.Status != AgendamentoStatus.CanceladoPeloCliente.ToString() &&
                            a.Status != AgendamentoStatus.CanceladoPeloBarbeiro.ToString() &&
@@ -108,8 +113,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public void CriarAgendamento(AgendamentoCriarRequest request)
         {
+            var tenantId = _tenantService.ObterTenantId();
             var tokenValido = _contexto.CodigoConfirmacao
-               .FirstOrDefault(t => t.Numero == request.Numero
+               .FirstOrDefault(t => t.TenantId == tenantId
+                                   && t.Numero == request.Numero
                                    && t.Codigo == request.CodigoConfirmacao
                                    && !t.Confirmado
                                    && t.DtExpiracao.ToUniversalTime() > DateTime.UtcNow) ?? throw new Exception("Código de confirmação inválido ou expirado.");
@@ -122,23 +129,25 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             // Verificar se existe exceção para essa data
             var dataAgendamento = request.DtAgendamento.Date;
             var existeExcecao = _contexto.Excecao
-                .Any(e => e.Excluido == false &&
+                .Any(e => e.TenantId == tenantId &&
+                         e.Excluido == false &&
                          e.Data.Date == dataAgendamento &&
                          (e.BarbeiroId == null || e.BarbeiroId == request.BarbeiroId));
 
             if (existeExcecao)
             {
                 var excecao = _contexto.Excecao
-                    .FirstOrDefault(e => e.Excluido == false &&
+                    .FirstOrDefault(e => e.TenantId == tenantId &&
+                                        e.Excluido == false &&
                                         e.Data.Date == dataAgendamento &&
                                         (e.BarbeiroId == null || e.BarbeiroId == request.BarbeiroId));
                 throw new Exception($"Não é possível agendar nesta data. Motivo: {excecao?.Descricao}");
             }
 
-            var barbeiro = _contexto.Usuario.Find(request.BarbeiroId) ?? throw new Exception("Barbeiro não encontrado.");
-            var servico = _contexto.Servico.Find(request.ServicoId) ?? throw new Exception("Serviço não encontrado.");
+            var barbeiro = _contexto.Usuario.FirstOrDefault(u => u.Id == request.BarbeiroId && u.TenantId == tenantId) ?? throw new Exception("Barbeiro não encontrado.");
+            var servico = _contexto.Servico.FirstOrDefault(s => s.Id == request.ServicoId && s.TenantId == tenantId) ?? throw new Exception("Serviço não encontrado.");
 
-            var usuarioLogado = _contexto.Usuario.Find(request.UsuarioId);
+            var usuarioLogado = _contexto.Usuario.FirstOrDefault(u => u.Id == request.UsuarioId && u.TenantId == tenantId);
 
             if (usuarioLogado != null)
             {
@@ -176,6 +185,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 // Criar agendamento etapa 1
                 var agendamentoEtapa1 = new Agendamento(request)
                 {
+                    TenantId = tenantId,
                     DescricaoEtapa = servico.DescricaoEtapa1 ?? "Etapa 1"
                 };
                 agendamentoEtapa1.DataHora = dataEtapa1;
@@ -191,6 +201,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 // Criar agendamento etapa 2
                 var agendamentoEtapa2 = new Agendamento
                 {
+                    TenantId = tenantId,
                     UsuarioId = agendamentoEtapa1.UsuarioId,
                     BarbeiroId = request.BarbeiroId,
                     ServicoId = request.ServicoId,
@@ -216,6 +227,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
             // ==================== SERVIÇO NORMAL ====================
             var agendamento = new Agendamento(request);
+            agendamento.TenantId = tenantId;
 
             var dataInicio = DateTime.SpecifyKind(request.DtAgendamento, DateTimeKind.Unspecified);
             ValidarConflito(request.BarbeiroId, dataInicio, tempoTotal);
@@ -243,7 +255,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             if (tempoTotal.Minute > 0)
                 dataFim = dataFim.AddMinutes(tempoTotal.Minute);
 
+            var tenantId = _tenantService.ObterTenantId();
             var conflito = _contexto.Agendamento.Any(a =>
+                            a.TenantId == tenantId &&
                             a.BarbeiroId == barbeiroId &&
                             a.Status != AgendamentoStatus.CanceladoPeloCliente.ToString() &&
                             a.Status != AgendamentoStatus.CanceladoPeloBarbeiro.ToString() &&
@@ -278,6 +292,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         private void SalvarAdicionais(int agendamentoId, List<AdicionalRequest> adicionais)
         {
+            var tenantId = _tenantService.ObterTenantId();
             // Remover adicionais existentes
             var existentes = _contexto.AgendamentoAdicional.Where(a => a.AgendamentoId == agendamentoId).ToList();
             if (existentes.Count > 0)
@@ -288,6 +303,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             {
                 _contexto.AgendamentoAdicional.Add(new AgendamentoAdicional
                 {
+                    TenantId = tenantId,
                     AgendamentoId = agendamentoId,
                     Nome = adicional.Nome,
                     Valor = adicional.Valor
@@ -322,6 +338,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         {
             var agendamentoSlot = new Agendamento
             {
+                TenantId = agendamentoPrincipal.TenantId,
                 BarbeiroId = barbeiroId,
                 DataHora = DateTime.SpecifyKind(agendamentoPrincipal.DataHora.AddMinutes(40), DateTimeKind.Unspecified),
                 Status = AgendamentoStatus.SlotReservado.ToString(),
@@ -335,8 +352,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public List<HorariosOcupadosResponse> HorariosOcupadosBarbeiro(HorarioRequest request)
         {
+            var tenantId = _tenantService.ObterTenantId();
             var agendamentos = _contexto.Agendamento
-                .Where(a => a.BarbeiroId == request.IdBarbeiro &&
+                .Where(a => a.TenantId == tenantId &&
+                           a.BarbeiroId == request.IdBarbeiro &&
                            a.DataHora.Date == request.Data.Date &&
                            a.Status != AgendamentoStatus.CanceladoPeloCliente.ToString() &&
                            a.Status != AgendamentoStatus.CanceladoPeloBarbeiro.ToString())
@@ -357,7 +376,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public PaginacaoResultado<AgendamentoDetalheResponse> ListarAgendamentos(PaginacaoFiltro<AgendamentoFiltroRequest> request)
         {
+            var tenantId = _tenantService.ObterTenantId();
             var query = _contexto.Agendamento
+                .Where(a => a.TenantId == tenantId)
                 .Where(a => a.Status != AgendamentoStatus.SlotReservado.ToString())
                 .AsQueryable();
 
@@ -458,27 +479,31 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
             Usuario.ValidarNumero(request.Numero);
 
+            var tenantId = _tenantService.ObterTenantId();
+
             // Verificar se existe exceção para essa data
             var dataAgendamento = request.DtAgendamento.Date;
             var existeExcecao = _contexto.Excecao
-                .Any(e => e.Excluido == false &&
+                .Any(e => e.TenantId == tenantId &&
+                         e.Excluido == false &&
                          e.Data.Date == dataAgendamento &&
                          (e.BarbeiroId == null || e.BarbeiroId == request.BarbeiroId));
 
             if (existeExcecao)
             {
                 var excecao = _contexto.Excecao
-                    .FirstOrDefault(e => e.Excluido == false &&
+                    .FirstOrDefault(e => e.TenantId == tenantId &&
+                                        e.Excluido == false &&
                                         e.Data.Date == dataAgendamento &&
                                         (e.BarbeiroId == null || e.BarbeiroId == request.BarbeiroId));
                 throw new Exception($"Não é possível agendar nesta data. Motivo: {excecao?.Descricao}");
             }
 
-            var barbeiro = _contexto.Usuario.Find(request.BarbeiroId) ?? throw new Exception("Barbeiro não encontrado.");
-            var servico = _contexto.Servico.Find(request.ServicoId) ?? throw new Exception("Serviço não encontrado.");
+            var barbeiro = _contexto.Usuario.FirstOrDefault(u => u.Id == request.BarbeiroId && u.TenantId == tenantId) ?? throw new Exception("Barbeiro não encontrado.");
+            var servico = _contexto.Servico.FirstOrDefault(s => s.Id == request.ServicoId && s.TenantId == tenantId) ?? throw new Exception("Serviço não encontrado.");
 
             // Buscar usuário pelo número (se existir)
-            var usuarioCliente = _contexto.Usuario.FirstOrDefault(u => u.Numero == request.Numero && !u.Excluido);
+            var usuarioCliente = _contexto.Usuario.FirstOrDefault(u => u.TenantId == tenantId && u.Numero == request.Numero && !u.Excluido);
 
             var tempoTotal = servico.TempoEstimado;
             var ocuparMaisSlot = tempoTotal.Hour > 0 || tempoTotal.Minute > 40;
@@ -501,6 +526,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
                 var agendamentoEtapa1 = new Agendamento
                 {
+                    TenantId = tenantId,
                     UsuarioId = usuarioCliente?.Id,
                     BarbeiroId = request.BarbeiroId,
                     ServicoId = request.ServicoId,
@@ -518,6 +544,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
                 var agendamentoEtapa2 = new Agendamento
                 {
+                    TenantId = tenantId,
                     UsuarioId = usuarioCliente?.Id,
                     BarbeiroId = request.BarbeiroId,
                     ServicoId = request.ServicoId,
@@ -543,6 +570,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
             var agendamento = new Agendamento
             {
+                TenantId = tenantId,
                 UsuarioId = usuarioCliente?.Id,
                 BarbeiroId = request.BarbeiroId,
                 ServicoId = request.ServicoId,
@@ -600,8 +628,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 AgendamentoStatus.VouAtrasar.ToString()
             };
 
+            var tenantId = _tenantService.ObterTenantId();
             var agendamentos = _contexto.Agendamento
-                .Where(a => a.UsuarioId == clienteId &&
+                .Where(a => a.TenantId == tenantId &&
+                           a.UsuarioId == clienteId &&
                            statusPendentes.Contains(a.Status) &&
                            a.Status != AgendamentoStatus.SlotReservado.ToString())
                 .OrderBy(a => a.DataHora)
@@ -630,11 +660,12 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public void GerarToken(string numero)
         {
+            var tenantId = _tenantService.ObterTenantId();
             var tokenAtivo = _contexto.CodigoConfirmacao
-                .FirstOrDefault(t => t.Numero == numero && !t.Confirmado && t.DtExpiracao.ToUniversalTime() > DateTime.UtcNow);
+                .FirstOrDefault(t => t.TenantId == tenantId && t.Numero == numero && !t.Confirmado && t.DtExpiracao.ToUniversalTime() > DateTime.UtcNow);
 
             var ultimoAgendamento = _contexto.Agendamento
-                .Where(x => x.NumeroCliente == numero && x.Status == AgendamentoStatus.Concluido.ToString())
+                .Where(x => x.TenantId == tenantId && x.NumeroCliente == numero && x.Status == AgendamentoStatus.Concluido.ToString())
                 .OrderByDescending(x => x.DataHora)
                 .FirstOrDefault();
 
@@ -653,7 +684,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             }
 
             var codigo = HelperGenerico.GerarCodigoConfirmacao();
-            var salvarToken = new CodigoConfirmacao(numero, codigo);
+            var salvarToken = new CodigoConfirmacao(numero, codigo) { TenantId = tenantId };
 
             _contexto.CodigoConfirmacao.Add(salvarToken);
             _contexto.SaveChanges();
@@ -662,8 +693,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public void GerarTokenCancelamento(string numero)
         {
+            var tenantId = _tenantService.ObterTenantId();
             var tokenAtivo = _contexto.CodigoConfirmacao
-                .FirstOrDefault(t => t.Numero == numero && !t.Confirmado && t.DtExpiracao.ToUniversalTime() > DateTime.UtcNow);
+                .FirstOrDefault(t => t.TenantId == tenantId && t.Numero == numero && !t.Confirmado && t.DtExpiracao.ToUniversalTime() > DateTime.UtcNow);
 
             if (tokenAtivo != null && tokenAtivo.Reenviado)
                 throw new Exception("Já foi enviado um código de confirmação. Por favor, verifique seu telefone.");
@@ -676,18 +708,20 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 return;
             }
 
-            var codigo = HelperGenerico.GerarCodigoConfirmacao();
-            var salvarToken = new CodigoConfirmacao(numero, codigo);
+            var codigo2 = HelperGenerico.GerarCodigoConfirmacao();
+            var salvarToken2 = new CodigoConfirmacao(numero, codigo2) { TenantId = tenantId };
 
-            _contexto.CodigoConfirmacao.Add(salvarToken);
+            _contexto.CodigoConfirmacao.Add(salvarToken2);
             _contexto.SaveChanges();
-            HelperGenerico.EnviarMensagem(codigo.ToString(), numero);
+            HelperGenerico.EnviarMensagem(codigo2.ToString(), numero);
         }
 
         public List<AgendamentoDetalheResponse> ListarPendentesPorNumero(string numero, int codigo)
         {
+            var tenantId = _tenantService.ObterTenantId();
             var tokenValido = _contexto.CodigoConfirmacao
-                .FirstOrDefault(t => t.Numero == numero
+                .FirstOrDefault(t => t.TenantId == tenantId
+                                    && t.Numero == numero
                                     && t.Codigo == codigo
                                     && !t.Confirmado
                                     && t.DtExpiracao.ToUniversalTime() > DateTime.UtcNow)
@@ -703,7 +737,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             var hojeUtc = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Unspecified);
 
             var agendamentos = _contexto.Agendamento
-                .Where(a => a.NumeroCliente == numero && statusPendentes.Contains(a.Status) && a.DataHora.Date >= hojeUtc)
+                .Where(a => a.TenantId == tenantId && a.NumeroCliente == numero && statusPendentes.Contains(a.Status) && a.DataHora.Date >= hojeUtc)
                 .OrderBy(a => a.DataHora)
                 .ToList();
 
@@ -729,8 +763,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public AgendamentoDetalheResponse? ProximoAgendamentoPorNumero(string numero, int codigo)
         {
+            var tenantId = _tenantService.ObterTenantId();
             var tokenValido = _contexto.CodigoConfirmacao
-                .FirstOrDefault(t => t.Numero == numero
+                .FirstOrDefault(t => t.TenantId == tenantId
+                                    && t.Numero == numero
                                     && t.Codigo == codigo
                                     && !t.Confirmado
                                     && t.DtExpiracao.ToUniversalTime() > DateTime.UtcNow)
@@ -746,7 +782,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             var hojeUtc = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Unspecified);
 
             var agendamento = _contexto.Agendamento
-                .Where(a => a.NumeroCliente == numero && statusPendentes.Contains(a.Status) && a.DataHora.Date >= hojeUtc)
+                .Where(a => a.TenantId == tenantId && a.NumeroCliente == numero && statusPendentes.Contains(a.Status) && a.DataHora.Date >= hojeUtc)
                 .OrderBy(a => a.DataHora)
                 .FirstOrDefault();
 
@@ -774,8 +810,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public void CancelarPorNumero(int agendamentoId, string numero, int codigo)
         {
+            var tenantId = _tenantService.ObterTenantId();
             var tokenValido = _contexto.CodigoConfirmacao
-                .FirstOrDefault(t => t.Numero == numero
+                .FirstOrDefault(t => t.TenantId == tenantId
+                                    && t.Numero == numero
                                     && t.Codigo == codigo
                                     && !t.Confirmado
                                     && t.DtExpiracao.ToUniversalTime() > DateTime.UtcNow)

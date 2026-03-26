@@ -12,6 +12,10 @@ namespace BarbeariaRocha.Infraestrutura.Mapping
 
             builder.HasKey(x => x.Id);
 
+            builder.Property(x => x.TenantId)
+                .IsRequired()
+                .HasMaxLength(100);
+
             builder.Property(x => x.Nome)
                 .IsRequired()
                 .HasMaxLength(50);
@@ -20,7 +24,7 @@ namespace BarbeariaRocha.Infraestrutura.Mapping
                 .IsRequired()
                 .HasMaxLength(11);
 
-            builder.HasIndex(x => x.Numero)
+            builder.HasIndex(x => new { x.TenantId, x.Numero })
             .IsUnique()
             .HasFilter("\"Status\" = 'Ativo'");
 

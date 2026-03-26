@@ -3,6 +3,7 @@
     public class Servico
     {
         public int Id { get; set; }
+        public string TenantId { get; set; } = string.Empty;
         public required string Descricao { get; set; }
         public decimal Valor { get; set; }
         public TimeOnly TempoEstimado { get; set; }
