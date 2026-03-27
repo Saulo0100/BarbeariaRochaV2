@@ -10,7 +10,7 @@ namespace BarbeariaRocha.Configurations
             {
                 c.SwaggerDoc("v2", new OpenApiInfo
                 {
-                    Title = "Barbearia do rocha API"
+                    Title = "Barbearia do rocha API v2"
                 });
                 c.SchemaFilter<EnumSchemaFilterConfig>();
                 c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
