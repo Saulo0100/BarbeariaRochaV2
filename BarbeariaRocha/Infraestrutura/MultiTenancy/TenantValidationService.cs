@@ -29,8 +29,11 @@ public class TenantValidationService(
 
             var tenant = await response.Content.ReadFromJsonAsync<TenantDto>();
 
-            if (tenant is null || tenant.Autorizado == false)
+            if (tenant is null)
                 return null;
+
+            if (!tenant.Autorizado)
+                return tenant;
 
             tenant.Domain = domain;
 
