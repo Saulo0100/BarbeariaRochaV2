@@ -1,12 +1,22 @@
-﻿﻿version: '3.8'
+version: "3.8"
 
 services:
-  api:
-    container_name: barbearia-api
-    build: .
-    ports:
-      - "5000:80"
-    restart: always
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ASPNETCORE_URLS=http://+:80
+ api:
+ container_name: barbearia-api
+ build: .
+ restart: always
+ environment:
+ - ASPNETCORE_ENVIRONMENT=Production
+ - ASPNETCORE_URLS=http://+:80
+ labels:
+ - traefik.enable=true
+ - traefik.http.routers.barbearia-api.rule=Host(`barbearia-api.cloud`)
+ - traefik.http.routers.barbearia-api.entrypoints=websecure
+ - traefik.http.routers.barbearia-api.tls.certresolver=letsencrypt
+ - traefik.http.services.barbearia-api.loadbalancer.server.port=80
+ networks:
+ - traefik-proxy
+
+networks:
+ traefik-proxy:
+ external: true
