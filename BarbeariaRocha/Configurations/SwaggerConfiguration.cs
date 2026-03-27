@@ -8,7 +8,7 @@ namespace BarbeariaRocha.Configurations
         {
             services.AddSwaggerGen(static c =>
             {
-                c.SwaggerDoc("v2", new OpenApiInfo
+                c.SwaggerDoc("v1", new OpenApiInfo
                 {
                     Title = "Barbearia do rocha API v2"
                 });
