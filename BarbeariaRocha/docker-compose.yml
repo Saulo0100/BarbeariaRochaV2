@@ -1,13 +1,14 @@
 version: "3.8"
 
 services:
- api:
- container_name: barbearia-api
- build:
- context: https://github.com/Saulo0100/BarbeariaRochaV2.git#main
- ports:
- - "5000:80"
- restart: unless-stopped
- environment:
- ASPNETCORE_ENVIRONMENT: Production
- ASPNETCORE_URLS: http://+:80
+  api:
+    container_name: barbearia-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:80"
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:80
