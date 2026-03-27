@@ -31,6 +31,7 @@ public class TenantValidationMiddleware(RequestDelegate next, ILogger<TenantVali
             await ResponderForbidden(context);
             return;
         }
+        context.Items[TenantService.TenantKey] = new TenantInfo(dominio, dominio);
 
         await next(context);
     }

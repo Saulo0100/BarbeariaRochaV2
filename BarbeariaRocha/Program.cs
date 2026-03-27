@@ -135,7 +135,6 @@ var app = builder.Build();
 
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseMiddleware<TenantValidationMiddleware>();
-app.UseMiddleware<TenantMiddleware>();
 
 // -------------------- PIPELINE --------------------
 
