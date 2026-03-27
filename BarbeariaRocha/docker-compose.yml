@@ -1,14 +1,12 @@
-version: "3.8"
+version: '3.8'
 
 services:
   api:
     container_name: barbearia-api
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
     ports:
       - "5000:80"
-    restart: unless-stopped
+    restart: always
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      ASPNETCORE_URLS: http://+:80
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:80
