@@ -3,7 +3,9 @@ version: '3.8'
 services:
   api:
     container_name: barbearia-api
-    build: .
+    build:
+      context: ./BarbeariaRocha
+      dockerfile: Dockerfile
     ports:
       - "5000:80"
     restart: always
