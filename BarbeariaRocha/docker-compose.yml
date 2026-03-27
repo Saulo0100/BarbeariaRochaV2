@@ -4,7 +4,7 @@ services:
   api:
     container_name: barbearia-api
     build:
-      context: ./BarbeariaRocha
+      context: .
       dockerfile: Dockerfile
     ports:
       - "5000:80"
