@@ -42,8 +42,8 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
 // -------------------- OPENAPI (.NET 10 Nativo) --------------------
-
-builder.Services.AddSwaggerConfiguration();
+if (!builder.Environment.IsProduction())
+    builder.Services.AddSwaggerConfiguration();
 
 // -------------------- DEPENDENCY INJECTION --------------------
 
@@ -61,6 +61,7 @@ builder.Services.AddScoped<IHorarioApp, HorarioApp>();
 builder.Services.AddScoped<IConfiguracaoHorarioApp, ConfiguracaoHorarioApp>();
 builder.Services.AddScoped<IAdicionalApp, AdicionalApp>();
 builder.Services.AddScoped<IConfiguracaoBarbeariaApp, ConfiguracaoBarbeariaApp>();
+builder.Services.AddScoped<ITenantAdminApp, TenantAdminApp>();
 builder.Services.AddSingleton<TokenProvider>();
 
 // -------------------- JWT --------------------
@@ -127,8 +128,8 @@ app.UseMiddleware<ExceptionMiddleware>();
 app.UseMiddleware<TenantValidationMiddleware>();
 
 // -------------------- PIPELINE --------------------
-
-app.UseSwaggerConfiguration();
+if (!builder.Environment.IsProduction())
+    app.UseSwaggerConfiguration();
 
 app.UseHttpsRedirection();
 
