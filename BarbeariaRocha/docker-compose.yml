@@ -1,18 +1,45 @@
+version: '3.8'
+
 services:
- api:
- container_name: barbearia-api
- build:
- context: https://github.com/Saulo0100/BarbeariaRochaV2.git#master:BarbeariaRocha
- dockerfile: Dockerfile
- restart: always
- environment:
- - ASPNETCORE_ENVIRONMENT=Production
- - ASPNETCORE_URLS=http://+:80
- labels:
- - traefik.enable=true
- - traefik.http.routers.barbearia-api.rule=Host(`barbearia-api.cloud`)
- - traefik.http.routers.barbearia-api.entrypoints=websecure
- - traefik.http.routers.barbearia-api.tls.certresolver=letsencrypt
- - traefik.http.services.barbearia-api.loadbalancer.server.port=80
- networks:
- - traefik-proxy
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=seuemail@email.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./letsencrypt:/letsencrypt"
+    networks:
+      - traefik-proxy
+
+  api:
+    container_name: barbearia-api
+    build:
+      context: https://github.com/Saulo0100/BarbeariaRochaV2.git#master:BarbeariaRocha
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:80
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`SEU_DOMINIO_AQUI`)"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.routers.api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.api.loadbalancer.server.port=80"
+    networks:
+      - traefik-proxy
+
+networks:
+  traefik-proxy:
+    external: false
