@@ -7,6 +7,7 @@ using BarbeariaRocha.Modelos.Paginacao;
 using BarbeariaRocha.Modelos.Request.Usuario;
 using BarbeariaRocha.Modelos.Response.Barbeiro;
 using BarbeariaRocha.Modelos.Response.Usuario;
+using Microsoft.EntityFrameworkCore;
 
 namespace BarbeariaRocha.Aplicacao.Servicos
 {
@@ -51,6 +52,23 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             var existente = _contexto.Usuario.FirstOrDefault(u => u.TenantId == tenantId && u.Numero == request.Numero && !u.Excluido);
             if (existente != null)
                 throw new Exception("Já existe um usuário com este número.");
+
+            var perfisBarbeiro = new[] { Perfil.Barbeiro.ToString(), Perfil.BarbeiroAdministrador.ToString() };
+            if (perfisBarbeiro.Contains(request.Perfil.ToString()) && Guid.TryParse(tenantId, out var tenantGuid))
+            {
+                var tenant = _contexto.Tenant
+                    .Include(t => t.Plano)
+                    .FirstOrDefault(t => t.Id == tenantGuid)
+                    ?? throw new Exception("Tenant não encontrado.");
+
+                var totalBarbeiros = _contexto.Usuario.Count(u =>
+                    u.TenantId == tenantId &&
+                    perfisBarbeiro.Contains(u.Perfil) &&
+                    !u.Excluido);
+
+                if (totalBarbeiros >= tenant.Plano.MaxBarbeiros)
+                    throw new Exception("Seu plano atual não permite cadastrar mais barbeiros.");
+            }
 
             var usuario = new Usuario(request);
             usuario.TenantId = tenantId;

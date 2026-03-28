@@ -21,22 +21,12 @@ builder.Logging.AddDebug();
 // -------------------- MULTI-TENANCY --------------------
 
 builder.Services.AddHttpContextAccessor();
-builder.Services.Configure<TenantOptions>(
-    builder.Configuration.GetSection(TenantOptions.SectionName)
-);
 builder.Services.AddScoped<ITenantService, TenantService>();
 
-// -------------------- TENANT VALIDATION (API EXTERNA) --------------------
+// -------------------- TENANT VALIDATION (BANCO DE DADOS) --------------------
 
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<ITenantValidationService, TenantValidationService>();
-builder.Services.AddHttpClient("TenantValidation", client =>
-{
-    var baseUrl = builder.Configuration["Apis:ConfiguracaoBaseUrl"]
-        ?? throw new InvalidOperationException("Apis:ConfiguracaoBaseUrl não está configurado.");
-    client.BaseAddress = new Uri(baseUrl);
-    client.Timeout = TimeSpan.FromSeconds(2);
-});
 
 // -------------------- DATABASE --------------------
 

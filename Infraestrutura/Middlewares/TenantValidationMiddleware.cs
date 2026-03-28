@@ -21,7 +21,7 @@ public class TenantValidationMiddleware(RequestDelegate next, ILogger<TenantVali
 
         if (tenant is null)
         {
-            logger.LogWarning("Domínio '{Domain}' não encontrado na API de tenant.", dominio);
+            logger.LogWarning("Domínio '{Domain}' não encontrado.", dominio);
             await ResponderForbidden(context);
             return;
         }
@@ -32,7 +32,7 @@ public class TenantValidationMiddleware(RequestDelegate next, ILogger<TenantVali
             await ResponderForbidden(context);
             return;
         }
-        context.Items[TenantService.TenantKey] = new TenantInfo(dominio, dominio);
+        context.Items[TenantService.TenantKey] = new TenantInfo(dominio, tenant.TenantId);
 
         await next(context);
     }

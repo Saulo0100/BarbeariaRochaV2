@@ -16,6 +16,9 @@ namespace BarbeariaRocha.Infraestrutura.Contexto
         public DbSet<Adicional> Adicional { get; set; }
         public DbSet<ConfiguracaoHorario> ConfiguracaoHorario { get; set; }
         public DbSet<ConfiguracaoBarbearia> ConfiguracaoBarbearia { get; set; }
+        public DbSet<Plano> Plano { get; set; }
+        public DbSet<Tenant> Tenant { get; set; }
+        public DbSet<TenantDominio> TenantDominio { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(Contexto).Assembly);

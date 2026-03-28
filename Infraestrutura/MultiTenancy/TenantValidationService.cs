@@ -1,49 +1,42 @@
 using BarbeariaRocha.Modelos.Tenant;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using AppContexto = BarbeariaRocha.Infraestrutura.Contexto.Contexto;
 
 namespace BarbeariaRocha.Infraestrutura.MultiTenancy;
 
 public class TenantValidationService(
-    IHttpClientFactory httpClientFactory,
+    AppContexto contexto,
     IMemoryCache cache,
     ILogger<TenantValidationService> logger) : ITenantValidationService
 {
-    private static readonly TimeSpan CacheDuration = TimeSpan.FromHours(1);
-    private const string HttpClientName = "TenantValidation";
+    private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(10);
 
     public async Task<TenantDto?> GetByDomain(string domain)
     {
         if (cache.TryGetValue(domain, out TenantDto? cached))
             return cached;
 
-        try
+        var tenantDominio = await contexto.TenantDominio
+            .AsNoTracking()
+            .FirstOrDefaultAsync(td => td.Dominio == domain);
+
+        if (tenantDominio is null)
         {
-            var client = httpClientFactory.CreateClient(HttpClientName);
-            var response = await client.GetAsync($"/verificar-dominio?dominio={domain}");
-
-            if (!response.IsSuccessStatusCode)
-            {
-                logger.LogWarning("API de tenant retornou {StatusCode} para o domínio '{Domain}'.", response.StatusCode, domain);
-                return null;
-            }
-
-            var tenant = await response.Content.ReadFromJsonAsync<TenantDto>();
-
-            if (tenant is null)
-                return null;
-
-            if (!tenant.Autorizado)
-                return tenant;
-
-            tenant.Domain = domain;
-
-            cache.Set(domain, tenant, CacheDuration);
-            return tenant;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Falha ao consultar API de tenant para o domínio '{Domain}'.", domain);
+            logger.LogWarning("Domínio '{Domain}' não encontrado no banco de dados.", domain);
             return null;
         }
+
+        var dto = new TenantDto
+        {
+            TenantId = tenantDominio.TenantId.ToString(),
+            Domain = domain,
+            Autorizado = tenantDominio.Autorizado
+        };
+
+        if (tenantDominio.Autorizado)
+            cache.Set(domain, dto, CacheDuration);
+
+        return dto;
     }
 }
