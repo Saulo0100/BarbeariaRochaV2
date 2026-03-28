@@ -17,7 +17,7 @@ namespace BarbeariaRocha.Controllers
         /// Endpoint público.
         /// </summary>
         [HttpGet]
-        public ActionResult<ConfiguracaoBarbeariaResponse> Obter()
+        public ActionResult<ConfiguracaoBarbeariaResponse?> Obter()
         {
             var resultado = _app.Obter();
             return Ok(resultado);

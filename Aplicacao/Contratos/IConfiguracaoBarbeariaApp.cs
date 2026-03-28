@@ -5,7 +5,7 @@ namespace BarbeariaRocha.Aplicacao.Contratos
 {
     public interface IConfiguracaoBarbeariaApp
     {
-        ConfiguracaoBarbeariaResponse Obter();
+        ConfiguracaoBarbeariaResponse? Obter();
         ConfiguracaoBarbeariaResponse Criar(ConfiguracaoBarbeariaRequest request);
         ConfiguracaoBarbeariaResponse Editar(int id, ConfiguracaoBarbeariaRequest request);
         void Deletar(int id);

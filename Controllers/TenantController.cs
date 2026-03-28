@@ -1,14 +1,13 @@
 using BarbeariaRocha.Aplicacao.Contratos;
 using BarbeariaRocha.Modelos.Request.Tenant;
 using BarbeariaRocha.Modelos.Response.Tenant;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BarbeariaRocha.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+
 public class TenantController(ITenantAdminApp app) : BaseController
 {
     private readonly ITenantAdminApp _app = app;

@@ -12,11 +12,13 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         private readonly Contexto _contexto = contexto;
         private readonly ITenantService _tenantService = tenantService;
 
-        public ConfiguracaoBarbeariaResponse Obter()
+        public ConfiguracaoBarbeariaResponse? Obter()
         {
             var tenantId = _tenantService.ObterTenantId();
-            var config = _contexto.ConfiguracaoBarbearia.FirstOrDefault(c => c.TenantId == tenantId)
-                ?? throw new Exception("Configuração da barbearia não encontrada.");
+            var config = _contexto.ConfiguracaoBarbearia.FirstOrDefault(c => c.TenantId == tenantId);
+
+            if (config == null)
+                return null;
 
             return Mapear(config);
         }

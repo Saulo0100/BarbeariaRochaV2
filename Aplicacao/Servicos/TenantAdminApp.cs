@@ -3,6 +3,7 @@ using BarbeariaRocha.Modelos.Entidades;
 using BarbeariaRocha.Modelos.Request.Tenant;
 using BarbeariaRocha.Modelos.Response.Tenant;
 using Microsoft.EntityFrameworkCore;
+using System.Net;
 using AppContexto = BarbeariaRocha.Infraestrutura.Contexto.Contexto;
 
 namespace BarbeariaRocha.Aplicacao.Servicos;
@@ -53,8 +54,10 @@ public class TenantAdminApp(AppContexto contexto) : ITenantAdminApp
 
     public async Task Deletar(string dominio)
     {
+        var dominioDecodificado = WebUtility.UrlDecode(dominio);
+
         var tenantDominio = await contexto.TenantDominio
-            .FirstOrDefaultAsync(d => d.Dominio == dominio)
+            .FirstOrDefaultAsync(d => d.Dominio == dominioDecodificado)
             ?? throw new Exception("Domínio não encontrado.");
 
         var tenantId = tenantDominio.TenantId.ToString();

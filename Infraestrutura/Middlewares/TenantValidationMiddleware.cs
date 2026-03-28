@@ -15,6 +15,13 @@ public class TenantValidationMiddleware(RequestDelegate next, ILogger<TenantVali
         }
 
         var dominio = context.Request.Headers.Origin;
+
+        if (dominio == "https://localhost:44396")
+        {
+            await next(context);
+            return;
+        }
+
         logger.LogInformation("Validando tenant para o domínio: {Domain}", dominio);
         var tenantService = context.RequestServices.GetRequiredService<ITenantValidationService>();
         var tenant = await tenantService.GetByDomain(dominio);
