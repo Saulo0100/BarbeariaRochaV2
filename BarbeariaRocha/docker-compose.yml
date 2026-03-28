@@ -1,9 +1,9 @@
-version: "3.8"
-
 services:
  api:
  container_name: barbearia-api
- build: .
+ build:
+ context: https://github.com/Saulo0100/BarbeariaRochaV2.git#master:BarbeariaRocha
+ dockerfile: Dockerfile
  restart: always
  environment:
  - ASPNETCORE_ENVIRONMENT=Production
@@ -16,7 +16,3 @@ services:
  - traefik.http.services.barbearia-api.loadbalancer.server.port=80
  networks:
  - traefik-proxy
-
-networks:
- traefik-proxy:
- external: true
