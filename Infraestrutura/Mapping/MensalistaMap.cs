@@ -32,7 +32,6 @@ namespace BarbeariaRocha.Infraestrutura.Mapping
              .IsRequired();
 
             builder.Property(x => x.Dia)
-                .IsRequired()
                 .HasMaxLength(20);
 
             builder.Property(x => x.Tipo)

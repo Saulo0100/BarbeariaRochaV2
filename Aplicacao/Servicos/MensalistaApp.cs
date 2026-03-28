@@ -21,13 +21,12 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
             var tenantId = _tenantService.ObterTenantId();
 
-            var dia = CultureInfo
-                    .GetCultureInfo("pt-BR")
-                    .DateTimeFormat
-                    .GetDayName(request.Dia);
+            string? dia = request.Dia.HasValue
+                ? CultureInfo.GetCultureInfo("pt-BR").DateTimeFormat.GetDayName(request.Dia.Value)
+                : null;
 
             // Validar se já existe mensalista com mesmo barbeiro, dia e horário
-            if (request.BarbeiroId.HasValue && !string.IsNullOrEmpty(request.Horario))
+            if (request.BarbeiroId.HasValue && !string.IsNullOrEmpty(request.Horario) && dia != null)
             {
                 var duplicado = _contexto.Mensalista
                     .Any(m => m.TenantId == tenantId
@@ -57,10 +56,11 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             _contexto.Mensalista.Add(mensalista);
             _contexto.SaveChanges();
 
-            // Gerar agendamentos para este mensalista (mês atual + próximo)
-            if (!string.IsNullOrEmpty(request.Horario) && request.BarbeiroId.HasValue)
+            // Gerar agendamentos apenas quando automático e com dia/horário/barbeiro definidos
+            if (request.agendamentosAutomaticos && request.Dia.HasValue
+                && !string.IsNullOrEmpty(request.Horario) && request.BarbeiroId.HasValue)
             {
-                GerarAgendamentosParaMensalista(mensalista, request.Dia);
+                GerarAgendamentosParaMensalista(mensalista, request.Dia.Value);
             }
         }
 
@@ -203,6 +203,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             var mensalistas = _contexto.Mensalista
                 .Where(m => m.TenantId == tenantId
                     && m.Status == MensalistaStatus.Ativo.ToString()
+                    && m.Dia != null
                     && m.Horario != null
                     && m.BarbeiroId != null)
                 .ToList();
@@ -330,8 +331,8 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             if (request.Valor <= 0)
                 throw new ArgumentException("O valor deve ser maior que zero.", nameof(request.Valor));
 
-            if (!Enum.IsDefined(typeof(DayOfWeek), request.Dia))
-                throw new ArgumentException("O dia é obrigatório.", nameof(request.Dia));
+            if (request.agendamentosAutomaticos && (!request.Dia.HasValue || !Enum.IsDefined(typeof(DayOfWeek), request.Dia.Value)))
+                throw new ArgumentException("O dia é obrigatório quando agendamentos automáticos estão habilitados.", nameof(request.Dia));
 
             if (!Enum.IsDefined(typeof(MensalistaTipo), request.Tipo))
                 throw new ArgumentException("O tipo é obrigatório.", nameof(request.Tipo));
