@@ -14,7 +14,7 @@ public class TenantValidationMiddleware(RequestDelegate next, ILogger<TenantVali
             return;
         }
 
-        var dominio = context.Request.Host.Host;
+        var dominio = context.Request.Headers.Origin;
         var tenantService = context.RequestServices.GetRequiredService<ITenantValidationService>();
         var tenant = await tenantService.GetByDomain(dominio);
 
