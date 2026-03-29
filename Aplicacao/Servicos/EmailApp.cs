@@ -8,18 +8,16 @@ namespace BarbeariaRocha.Aplicacao.Servicos
     {
         private readonly IConfiguration _configuration = configuration;
 
-        public void EnviarEmailConfirmacao(string email, string nome, string token)
+        public void EnviarEmailConfirmacao(string email, string nome, string token, string dominio, string nomeEstabelecimento)
         {
-            var dominio = _configuration["Proprietario:Dominio"]
-                ?? throw new InvalidOperationException("Dominio não configurado.");
 
             var linkConfirmacao = $"{dominio}/confirmar-email?token={token}";
 
-            var assunto = "Confirme seu cadastro - Barbearia Rocha";
+            var assunto = $@"Confirme seu cadastro - {nomeEstabelecimento}";
             var corpo = $@"
                 <div style='font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; background-color: #1a1a1a; color: #e0e0e0; padding: 30px; border-radius: 10px;'>
                     <div style='text-align: center; margin-bottom: 20px;'>
-                        <h1 style='color: #c8a45a; font-size: 24px; margin: 0;'>Barbearia Rocha</h1>
+                        <h1 style='color: #c8a45a; font-size: 24px; margin: 0;'>{nomeEstabelecimento}</h1>
                     </div>
                     <p style='font-size: 16px;'>Olá, <strong>{nome}</strong>!</p>
                     <p style='font-size: 14px; line-height: 1.6;'>
@@ -39,18 +37,15 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             Enviar(email, assunto, corpo);
         }
 
-        public void EnviarEmailRedefinicaoSenha(string email, string nome, string token)
+        public void EnviarEmailRedefinicaoSenha(string email, string nome, string token, string dominio, string nomeEstabelecimento)
         {
-            var dominio = _configuration["Proprietario:Dominio"]
-                ?? throw new InvalidOperationException("Dominio não configurado.");
-
             var linkRedefinicao = $"{dominio}/redefinir-senha?token={token}";
 
-            var assunto = "Redefinição de Senha - Barbearia Rocha";
+            var assunto = $"Redefinição de Senha - {nomeEstabelecimento}";
             var corpo = $@"
                 <div style='font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; background-color: #1a1a1a; color: #e0e0e0; padding: 30px; border-radius: 10px;'>
                     <div style='text-align: center; margin-bottom: 20px;'>
-                        <h1 style='color: #c8a45a; font-size: 24px; margin: 0;'>Barbearia Rocha</h1>
+                        <h1 style='color: #c8a45a; font-size: 24px; margin: 0;'>{nomeEstabelecimento}</h1>
                     </div>
                     <p style='font-size: 16px;'>Olá, <strong>{nome}</strong>!</p>
                     <p style='font-size: 14px; line-height: 1.6;'>

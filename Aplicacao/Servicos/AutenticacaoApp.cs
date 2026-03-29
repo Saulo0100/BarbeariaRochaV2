@@ -43,7 +43,16 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             usuario.TokenConfirmacao = tokenRedefinicao;
             _contexto.SaveChanges();
 
-            _emailApp.EnviarEmailRedefinicaoSenha(usuario.Email, usuario.Nome, tokenRedefinicao);
+            try
+            {
+                var dominio = _contexto.TenantDominio.Where(t => t.TenantId == new Guid(tenantId)).Select(x => x.Dominio).FirstOrDefault();
+                var nomeEstabelecimento = _contexto.Tenant.Where(t => t.Id == new Guid(tenantId)).Select(x => x.Nome).FirstOrDefault();
+                _emailApp.EnviarEmailRedefinicaoSenha(usuario.Email, usuario.Nome, tokenRedefinicao, dominio!, nomeEstabelecimento!);
+            }
+            catch
+            {
+
+            }
         }
 
         public void RedefinirSenha(RedefinirSenhaRequest request)

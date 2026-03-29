@@ -37,11 +37,14 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             // Enviar email de confirmação
             try
             {
-                _emailApp.EnviarEmailConfirmacao(usuario.Email, usuario.Nome, usuario.TokenConfirmacao!);
+                var dominio = _contexto.TenantDominio.Where(t => t.TenantId == new Guid(tenantId)).Select(x => x.Dominio).FirstOrDefault();
+                var nomeEstabelecimento = _contexto.Tenant.Where(t => t.Id == new Guid(tenantId)).Select(x => x.Nome).FirstOrDefault();
+                if (dominio != null)
+                    _emailApp.EnviarEmailConfirmacao(usuario.Email, usuario.Nome, usuario.TokenConfirmacao!, dominio, nomeEstabelecimento!);
             }
             catch
             {
-                // Não falhar o cadastro se o email não for enviado
+                throw new Exception("Usuário criado, mas falha ao enviar email de confirmação. Por favor, entre em contato com o suporte.");
             }
         }
 
