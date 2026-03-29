@@ -5,8 +5,6 @@ using BarbeariaRocha.Infraestrutura;
 using BarbeariaRocha.Infraestrutura.Contexto;
 using BarbeariaRocha.Infraestrutura.Middlewares;
 using BarbeariaRocha.Infraestrutura.MultiTenancy;
-using Hangfire;
-using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -105,18 +103,18 @@ builder.Services.AddCors(options =>
 
 // -------------------- HANGFIRE --------------------
 
-builder.Services.AddHangfire(config =>
-{
-    config.UsePostgreSqlStorage(options =>
-    {
-        options.UseNpgsqlConnection(
-            builder.Configuration.GetConnectionString("DefaultConnection")
-        );
-    })
-    .UseSimpleAssemblyNameTypeSerializer();
-});
+//builder.Services.AddHangfire(config =>
+//{
+//    config.UsePostgreSqlStorage(options =>
+//    {
+//        options.UseNpgsqlConnection(
+//            builder.Configuration.GetConnectionString("DefaultConnection")
+//        );
+//    })
+//    .UseSimpleAssemblyNameTypeSerializer();
+//});
 
-builder.Services.AddHangfireServer();
+//builder.Services.AddHangfireServer();
 
 // -------------------- BUILD --------------------
 
