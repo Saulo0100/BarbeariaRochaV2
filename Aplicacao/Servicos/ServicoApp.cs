@@ -1,18 +1,18 @@
-﻿using BarbeariaRocha.Aplicacao.Contratos;
-using BarbeariaRocha.Infraestrutura.Contexto;
+using BarbeariaRocha.Aplicacao.Contratos;
 using BarbeariaRocha.Infraestrutura.MultiTenancy;
+using BarbeariaRocha.Infraestrutura.Repositorios;
 using BarbeariaRocha.Modelos.Entidades;
 using BarbeariaRocha.Modelos.Enums;
 using BarbeariaRocha.Modelos.Paginacao;
 using BarbeariaRocha.Modelos.Request.Servico;
 using BarbeariaRocha.Modelos.Response.Servico;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace BarbeariaRocha.Aplicacao.Servicos
 {
-    public class ServicoApp(Contexto contexto, ITenantService tenantService) : IServicoApp
+    public class ServicoApp(IRepositorio<Servico> repositorio, ITenantService tenantService, IMemoryCache cache) : IServicoApp
     {
-        private readonly Contexto _contexto = contexto;
-        private readonly ITenantService _tenantService = tenantService;
+        private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(10);
 
         public void CriarServico(ServicoCriarRequest request)
         {
@@ -28,7 +28,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             if (!Enum.IsDefined(typeof(CategoriaServico), request.Categoria))
                 throw new ArgumentException("A categoria é obrigatória e deve ser válida.");
 
-            var tenantId = _tenantService.ObterTenantId();
+            var tenantId = tenantService.ObterTenantId();
 
             var servico = new Servico
             {
@@ -39,16 +39,22 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 Categoria = request.Categoria.ToString()
             };
 
-            _contexto.Servico.Add(servico);
-            _contexto.SaveChanges();
+            repositorio.AdicionarAsync(servico).GetAwaiter().GetResult();
+            repositorio.SalvarAsync().GetAwaiter().GetResult();
+            cache.Remove($"servicos:{tenantId}");
         }
 
         public void DeletarServico(int id)
         {
-            var tenantId = _tenantService.ObterTenantId();
-            var servico = _contexto.Servico.FirstOrDefault(s => s.Id == id && s.TenantId == tenantId) ?? throw new Exception("Serviço não encontrado.");
+            var tenantId = tenantService.ObterTenantId();
+            var servico = repositorio.Query()
+                .FirstOrDefault(s => s.Id == id && s.TenantId == tenantId)
+                ?? throw new Exception("Serviço não encontrado.");
+
             servico.Excluido = true;
-            _contexto.SaveChanges();
+            repositorio.Atualizar(servico);
+            repositorio.SalvarAsync().GetAwaiter().GetResult();
+            cache.Remove($"servicos:{tenantId}");
         }
 
         public PaginacaoResultado<ServicoDetalhesResponse> ListarServicos(PaginacaoFiltro<ServicoFiltroRequest> filtro)
@@ -56,20 +62,18 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             if (filtro == null)
                 throw new ArgumentNullException(nameof(filtro));
 
-            var tenantId = _tenantService.ObterTenantId();
+            var tenantId = tenantService.ObterTenantId();
 
-            var query = _contexto.Servico
+            var query = repositorio.Query()
                 .Where(s => s.TenantId == tenantId && s.Excluido == false);
 
             if (filtro.Filtro != null)
             {
                 if (!string.IsNullOrWhiteSpace(filtro.Filtro.Nome))
-                    query = query.Where(s =>
-                        s.Descricao.Contains(filtro.Filtro.Nome));
+                    query = query.Where(s => s.Descricao.Contains(filtro.Filtro.Nome));
 
                 if (filtro.Filtro.Categoria != 0)
-                    query = query.Where(s =>
-                        s.Categoria == filtro.Filtro.Categoria.ToString());
+                    query = query.Where(s => s.Categoria == filtro.Filtro.Categoria.ToString());
             }
 
             var totalRegistros = query.Count();

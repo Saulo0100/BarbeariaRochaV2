@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace BarbeariaRocha.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/v1/[controller]")]
     public class AdicionalController(IAdicionalApp app) : BaseController
     {
         private readonly IAdicionalApp _app = app;

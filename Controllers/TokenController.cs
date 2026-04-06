@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace BarbeariaRocha.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("v1/[controller]")]
     public class TokenController(ITokenApp app) : BaseController
     {
         public readonly ITokenApp _app = app;

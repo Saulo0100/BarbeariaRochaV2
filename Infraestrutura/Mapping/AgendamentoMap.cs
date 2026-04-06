@@ -59,5 +59,14 @@ public class AgendamentoMap : IEntityTypeConfiguration<Agendamento>
                .HasForeignKey(x => x.AgendamentoPrincipalId)
                .OnDelete(DeleteBehavior.Restrict)
                .IsRequired(false);
+
+        builder.HasIndex(x => new { x.TenantId, x.BarbeiroId, x.DataHora })
+            .HasDatabaseName("IX_Agendamentos_TenantId_BarbeiroId_DataHora");
+
+        builder.HasIndex(x => new { x.TenantId, x.UsuarioId })
+            .HasDatabaseName("IX_Agendamentos_TenantId_UsuarioId");
+
+        builder.HasIndex(x => new { x.TenantId, x.Status })
+            .HasDatabaseName("IX_Agendamentos_TenantId_Status");
     }
 }

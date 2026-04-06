@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace BarbeariaRocha.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/v1/[controller]")]
     public class UsuarioController(IUsuarioApp app) : BaseController
     {
         public readonly IUsuarioApp _app = app;

@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace BarbeariaRocha.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/v1/[controller]")]
     public class TestesController(ITestesApp app) : BaseController
     {
         private readonly ITestesApp _app = app;

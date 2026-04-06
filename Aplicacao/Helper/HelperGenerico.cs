@@ -1,9 +1,5 @@
 ﻿using BarbeariaRocha.Modelos.Entidades;
 using BarbeariaRocha.Modelos.Enums;
-using BarbeariaRocha.Modelos.Whatsapp;
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace BarbeariaRocha.Aplicacao.Helper
@@ -81,26 +77,6 @@ namespace BarbeariaRocha.Aplicacao.Helper
                 case TipoAgenda.Fechada: return 0;
                 default: throw new NotImplementedException();
             }
-        }
-
-        public static void EnviarMensagem(string codigo, string numeroEnvio)
-        {
-            var configuration = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: false)
-                .Build();
-            string? Token = configuration.GetSection("Whatsapp:Token").Value;
-            string? Endpoint = configuration.GetSection("Whatsapp:Endpoint").Value;
-            using var httpClient = new HttpClient();
-
-            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Token);
-            httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-            var envio = new WhatsappEnvio(codigo, numeroEnvio);
-            var json = JsonSerializer.Serialize(envio);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var response = httpClient.PostAsync(Endpoint, content).Result;
-            var result = response.Content.ReadAsStringAsync();
         }
 
         public static string RemoveMask(string? value)

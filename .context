@@ -1,0 +1,323 @@
+# BarbeariaRocha — Project Context
+
+## Overview
+
+**Type:** ASP.NET Core 10.0 Web API
+**Domain:** Barbershop management system (SaaS, multi-tenant)
+**Language:** C# with Portuguese naming conventions throughout
+**Database:** PostgreSQL (Neon Cloud, AWS US-East-1) via EF Core + Npgsql
+**Auth:** JWT Bearer (12h expiry, HMAC SHA-256)
+**Logs:** Serilog (structured, console sink, enriched with MachineeName + ThreadId)
+**Deployment:** Docker + Traefik on `barbearia-api.cloud`
+**Repository:** https://github.com/Saulo0100/BarbeariaRochaV2.git
+**CI/CD:** GitHub Actions → builds, pushes to GHCR (`ghcr.io/saulo0100/barbeariarocha`)
+
+All API routes are versioned under `/api/v1/`.
+
+---
+
+## Directory Structure
+
+```
+BarbeariaRocha/
+├── Aplicacao/
+│   ├── Contratos/          # Service interfaces + IWhatsappService + IRepositorio
+│   ├── Servicos/           # Service implementations (business logic) + WhatsappService
+│   └── Helper/             # HelperGenerico.cs (slots, codes), Criptografia.cs (PBKDF2)
+├── Controllers/            # 14 REST API controllers (all routed under api/v1/)
+├── Infraestrutura/
+│   ├── Contexto/           # EF Core DbContext + DesignTimeFactory
+│   ├── Mapping/            # IEntityTypeConfiguration fluent maps (9 files, indexes defined here)
+│   ├── Middlewares/        # ExceptionMiddleware (prod-safe), TenantValidationMiddleware
+│   ├── MultiTenancy/       # TenantService, TenantValidationService (cached), TenantInfo
+│   └── Repositorios/       # IRepositorio<T>, Repositorio<T> (generic repository pattern)
+├── Migrations/             # 18 EF Core migrations (last: 20260406000000_AddPerformanceIndexes)
+├── Modelos/
+│   ├── Entidades/          # 16 domain entities
+│   ├── Enums/              # 8 enumerations
+│   ├── Paginacao/          # PaginacaoFiltro<T>, PaginacaoResultado<T>
+│   ├── Request/            # DTOs for API input (grouped by feature)
+│   ├── Response/           # DTOs for API output (grouped by feature)
+│   ├── Tenant/             # TenantInfo model, TenantDto
+│   └── Whatsapp/           # WhatsappEnvio model
+├── Configurations/         # SwaggerConfiguration, EnumSchemaFilterConfig
+├── .github/workflows/      # ci.yml — build + Docker push to GHCR on master push
+├── Program.cs              # DI, Serilog, HealthChecks, CORS from config, middleware pipeline
+├── BarbeariaRocha.csproj
+├── appsettings.json        # Production config (add CorsOrigins array here)
+├── appsettings.Development.json
+├── .env.example            # Template for environment variable overrides
+├── Dockerfile              # Multi-stage .NET 10 build
+├── docker-compose.yml      # Uses GHCR image, Traefik labels, env var overrides
+└── README.md
+```
+
+---
+
+## Architecture
+
+**Pattern:** Layered — Controllers → Application Services → IRepositorio<T> / DbContext → PostgreSQL
+
+- **Repository pattern** introduced: `IRepositorio<T>` / `Repositorio<T>` (open-generic DI)
+  - `ServicoApp` and `AdicionalApp` already migrated to use `IRepositorio<T>`
+  - Other services still use `Contexto` directly — migrate on touch
+- Service interfaces (`Contratos/`) consumed by controllers
+- DTOs separated into `Request/` and `Response/` per feature folder
+- All entities carry `TenantId: string` for multi-tenant isolation
+- All list endpoints use `PaginacaoFiltro<T>` / `PaginacaoResultado<T>`
+
+### Multi-Tenancy (single-database model)
+
+1. `TenantValidationMiddleware` — validates Origin header against `TenantDominio` table, injects `TenantInfo` into `HttpContext.Items`
+2. `TenantService` — resolves `TenantId` from `HttpContext.Items` for use inside services
+3. `TenantDominio` — maps custom domains to `Tenant.Id`; has `Autorizado` flag
+4. All service queries filter by `TenantId` obtained from `ITenantService.ObterTenantId()`
+5. Memory caching in `TenantValidationService` (10 min TTL)
+
+**Bypass paths (no tenant check):** `/swagger`, `/health`, `/favicon.ico`, `https://localhost:44396`
+
+### CORS
+
+Origins configured via `appsettings.json` key `CorsOrigins` (string array).
+Override per environment with env var `CorsOrigins__0=https://...`, `CorsOrigins__1=https://...`
+
+### Secrets management
+
+**Never commit real secrets.** Override via environment variables — ASP.NET Core maps `JWT__SECRET` → `Jwt:Secret`, `ConnectionStrings__DefaultConnection` → connection string, etc.
+See `.env.example` for all required variables.
+
+---
+
+## Domain Entities (`Modelos/Entidades/`)
+
+| Entity | Key Fields | Notes |
+|--------|-----------|-------|
+| `Usuario` | Id, Nome, Numero, Email, Senha, Perfil (enum), TenantId | Unique on (TenantId, Numero) where Excluido=false |
+| `Agendamento` | Id, UsuarioId, BarbeiroId, ServicoId, DataHora, Status (enum), TenantId | Two-stage via AgendamentoPrincipalId |
+| `Servico` | Id, Descricao, Valor, TempoEstimado (TimeOnly), RequerDuasEtapas (bool), TenantId | Uses IRepositorio<Servico> |
+| `Mensalista` | Id, UsuarioId, Status, Tipo, TenantId | Monthly subscription |
+| `MensalistaCorte` | Id, MensalistaId, DataHora, TenantId | Cut usage log |
+| `Adicional` | Id, Nome, Preco, Excluido, TenantId | Uses IRepositorio<Adicional> + cache |
+| `AgendamentoAdicional` | AgendamentoId, AdicionalId | Junction table |
+| `ConfiguracaoHorario` | DiaSemana, HoraInicio, HoraFim, AlmocoInicio, AlmocoFim, TenantId | Cached 15 min, invalidated on Salvar |
+| `ConfiguracaoBarbearia` | Endereco, Telefone, Cidade, TenantId | Establishment details |
+| `CodigoConfirmacao` | UsuarioId, Codigo, Expiracao | Email verification codes |
+| `Excecao` | Id, UsuarioId, BarbeiroId, Motivo, TenantId | No-show / cancellation log |
+| `Tenant` | Id (Guid), Nome, PlanoId | Barbershop establishment |
+| `TenantDominio` | Id, Dominio, TenantId, Autorizado | Domain → Tenant mapping |
+| `Plano` | Id, Nome, MaxBarbeiros | Subscription plan |
+
+**Soft delete:** `Excluido: bool = false` on most entities. Always filter `x.Excluido == false`.
+
+---
+
+## Enumerations (`Modelos/Enums/`)
+
+| Enum | Values |
+|------|--------|
+| `Perfil` | Cliente, Barbeiro, BarbeiroAdministrador, Administrador |
+| `AgendamentoStatus` | Pendente, Concluido, LembreteEnviado, CanceladoPeloCliente, CanceladoPeloBarbeiro, Confirmado, VouAtrasar, SlotReservado, ClienteFaltou |
+| `MetodoPagamento` | Dinheiro, Pix, Cartao, etc. |
+| `MensalistaStatus` | Ativo, Inativo, etc. |
+| `MensalistaTipo` | Type variants |
+| `CategoriaServico` | Service category classifications |
+| `TipoAgenda` | Diaria, Semanal, Quinzenal, Mensal, Fechada |
+| `PeriodoTrabalho` | Working shift types |
+
+---
+
+## Controllers (`Controllers/`) — All under `api/v1/`
+
+| Controller | Route | Roles |
+|-----------|-------|-------|
+| `AgendamentoController` | `api/v1/agendamento` | Mixed (some public) |
+| `AutenticacaoController` | `api/v1/autenticacao` | Public |
+| `UsuarioController` | `api/v1/usuario` | Mixed |
+| `ServicoController` | `api/v1/servico` | Mixed |
+| `AdicionalController` | `api/v1/adicional` | Mixed |
+| `MensalistaController` | `api/v1/mensalista` | Authenticated |
+| `HorarioController` | `api/v1/horario` | Public |
+| `RelatorioController` | `api/v1/relatorio` | BarbeiroAdministrador, Administrador |
+| `ConfiguracaoHorarioController` | `api/v1/configuracao-horario` | Mixed |
+| `ConfiguracaoBarbeariaController` | `api/v1/configuracao-barbearia` | Mixed |
+| `ExcecaoController` | `api/v1/excecao` | Authenticated |
+| `TokenController` | `v1/token` | Public |
+| `TenantController` | `api/v1/tenant` | System |
+| `TestesController` | `api/v1/testes` | Dev only |
+| `WhatsappController` | (empty shell) | — |
+
+`BaseController` exposes: `UserId()`, `PerfilUsuario()`, `Numero()` from JWT claims.
+
+---
+
+## Application Services (`Aplicacao/`)
+
+| Service | Interface | Repository | Cache |
+|---------|-----------|-----------|-------|
+| `AgendamentoApp` | `IAgendamentoApp` | Contexto | — |
+| `AutenticacaoApp` | `IAutenticacaoApp` | Contexto | — |
+| `UsuarioApp` | `IUsuarioApp` | Contexto | — |
+| `ServicoApp` | `IServicoApp` | `IRepositorio<Servico>` | 10 min (per tenant) |
+| `AdicionalApp` | `IAdicionalApp` | `IRepositorio<Adicional>` | 10 min (per tenant) |
+| `MensalistaApp` | `IMensalistaApp` | Contexto | — |
+| `RelatorioApp` | `IRelatorioApp` | Contexto | — |
+| `HorarioApp` | `IHorarioApp` | Contexto | — |
+| `TokenApp` | `ITokenApp` | Contexto | — |
+| `EmailApp` | `IEmailApp` | Gmail SMTP | — |
+| `WhatsappService` | `IWhatsappService` | Facebook Graph API v22 | — |
+| `ExcecaoApp` | `IExcecaoApp` | Contexto | — |
+| `ConfiguracaoHorarioApp` | `IConfiguracaoHorarioApp` | Contexto | 15 min (per tenant, invalidated on save) |
+| `ConfiguracaoBarbeariaApp` | `IConfiguracaoBarbeariaApp` | Contexto | — |
+| `TenantAdminApp` | `ITenantAdminApp` | Contexto | — |
+
+**Migration guide for new services:** Use `IRepositorio<T>` instead of `Contexto` directly. Register as `builder.Services.AddScoped(typeof(IRepositorio<>), typeof(Repositorio<>))` (already registered as open-generic in Program.cs).
+
+---
+
+## Infrastructure (`Infraestrutura/`)
+
+### DbContext (`Infraestrutura/Contexto/Contexto.cs`)
+- Single DbContext, `ApplyConfigurationsFromAssembly`
+- `ContextoFactory` for design-time migrations
+
+### Repository (`Infraestrutura/Repositorios/`)
+- `IRepositorio<T>`: `Query()`, `ObterPorIdAsync()`, `AdicionarAsync()`, `Atualizar()`, `Remover()`, `SalvarAsync()`
+- `Repositorio<T>`: wraps `DbSet<T>` from `Contexto`
+- Registered as open-generic in Program.cs
+
+### Middlewares
+- **`ExceptionMiddleware`** — catches exceptions; in Production returns generic message; in Development returns `ex.Message`. Logs with Method+Path context.
+- **`TenantValidationMiddleware`** — validates Origin, injects TenantInfo, returns 403 if invalid/inactive
+
+### Multi-Tenancy
+- **`ITenantService` / `TenantService`** — resolves TenantId from `HttpContext.Items`
+- **`ITenantValidationService` / `TenantValidationService`** — validates domains, caches (10 min)
+
+### Security (`Infraestrutura/TokenProvider.cs`)
+- JWT generation, claims: `Id`, `Numero`, `Nome`, `Perfil`; 12h expiry; HMAC-SHA256
+
+### Performance Indexes (migration 20260406000000_AddPerformanceIndexes)
+- `Agendamentos (TenantId, BarbeiroId, DataHora)` — primary query path
+- `Agendamentos (TenantId, UsuarioId)`
+- `Agendamentos (TenantId, Status)`
+- `Mensalistas (TenantId, Status)`
+
+---
+
+## Helpers (`Aplicacao/Helper/`)
+
+### `HelperGenerico.cs`
+- `MontarHorariosPorConfig(ConfiguracaoHorario)` — appointment slots from DB config
+- `GerarSlots()` / `GerarSlotsContinuos()` — with/without lunch break
+- `GerarCodigoConfirmacao()` — 4-digit codes
+- `GerarDiasAgenda(TipoAgenda)` — date ranges per schedule type
+- `RemoveMask(string)` — strips non-numeric chars
+
+> `EnviarMensagem` was removed — use `IWhatsappService.EnviarMensagemAsync()` instead.
+
+### `Criptografia.cs`
+- `GerarSenha(string)` — PBKDF2 SHA-256, 100k iterations, returns `hash:salt`
+- `VerificarSenha(senha, hash)` — constant-time comparison
+
+---
+
+## Key Business Logic
+
+### Two-Stage Services (`RequerDuasEtapas = true`)
+- Stage 1: standard booking
+- Stage 2: auto-created with minimum hour gap after stage 1
+- `AgendamentoPrincipalId` on stage-2 links to stage-1 Id
+- Stage 2 status = `SlotReservado`
+
+### Appointment Slot Generation
+- `ConfiguracaoHorario` per weekday (HoraInicio→HoraFim, with optional AlmocoInicio/AlmocoFim)
+- `HelperGenerico.MontarHorariosPorConfig()` → `List<TimeOnly>`
+- Cached 15 min per tenant; cache invalidated on Salvar
+
+### Monthly Subscription (Mensalista)
+- Each cut logged as `MensalistaCorte`
+- Status-based filtering; plan limits barber count
+
+### Pagination
+- `PaginacaoFiltro<T> { Pagina, ItensPorPagina, Filtro }` on request
+- `PaginacaoResultado<T> { Items, TotalRegistros, PaginaAtual, ItensPorPagina }` on response
+
+---
+
+## External Integrations
+
+| Service | Details |
+|---------|---------|
+| **Email** | Gmail SMTP via `EmailApp` — password reset, confirmations |
+| **WhatsApp** | Facebook Graph API v22.0 via `WhatsappService` — async, logged errors |
+| **Configuration API** | External REST at `Apis:ConfiguracaoBaseUrl` |
+
+---
+
+## NuGet Dependencies
+
+| Package | Purpose |
+|---------|---------|
+| `Microsoft.AspNetCore.Authentication.JwtBearer 10.0.3` | JWT middleware |
+| `Microsoft.EntityFrameworkCore 10.0.3` | ORM |
+| `Npgsql.EntityFrameworkCore.PostgreSQL 10.0.0` | PostgreSQL provider |
+| `Npgsql.NodaTime 10.0.1` | Timezone-aware datetime |
+| `Serilog.AspNetCore 8.0.3` | Structured logging |
+| `Serilog.Enrichers.Environment 3.0.1` | Log enrichment (MachineName) |
+| `Serilog.Enrichers.Thread 4.0.0` | Log enrichment (ThreadId) |
+| `Swashbuckle.AspNetCore 9.0.6` | Swagger/OpenAPI (dev only) |
+| `Microsoft.IdentityModel.Tokens 8.16.0` | Token primitives |
+| `System.IdentityModel.Tokens.Jwt 8.16.0` | JWT creation |
+
+---
+
+## Configuration (`appsettings.json` keys)
+
+```json
+{
+  "CorsOrigins": ["https://...", "http://localhost:3000"],
+  "ConnectionStrings": { "DefaultConnection": "<PostgreSQL Neon>" },
+  "Jwt": { "Secret": "...", "Issuer": "GsSytem", "Audience": "Account" },
+  "Email": { "From": "...", "Host": "smtp.gmail.com", "Username": "...", "Password": "..." },
+  "Whatsapp": { "Verify_Token": "...", "Token": "...", "endpoint": "https://graph.facebook.com/v22.0/{id}/messages" },
+  "Apis": { "ConfiguracaoBaseUrl": "http://..." }
+}
+```
+
+Override any key via environment variable (double-underscore separator):
+`Jwt__Secret=...` | `ConnectionStrings__DefaultConnection=...`
+
+Swagger available only in non-Production environments.
+Health check: `GET /health`
+
+---
+
+## Deployment
+
+- **Dockerfile:** multi-stage, .NET 10 SDK build → ASP.NET 10 runtime, port 8080
+- **docker-compose.yml:** pulls `ghcr.io/saulo0100/barbeariarocha:latest`, Traefik HTTPS on `barbearia-api.cloud`
+- **CI/CD:** `.github/workflows/ci.yml` — on push to master: build → publish → Docker push to GHCR
+
+---
+
+## Conventions & Patterns
+
+- **Portuguese naming** throughout (entities, services, methods, variables)
+- **Repository pattern** — use `IRepositorio<T>` for new code; existing services use `Contexto` directly (migrate on touch)
+- **Soft delete** via `Excluido: bool` — never hard-delete
+- **All entities have TenantId** — always scope queries: `.Where(x => x.TenantId == tenantId)`
+- **DTOs** — never expose entities directly; use Request/Response models
+- **Pagination** on all list endpoints
+- **EF Fluent API only** — no data annotations; all in `Infraestrutura/Mapping/`
+- **Async** — `IWhatsappService` is async; new services should prefer async throughout
+- **No secrets in appsettings.json** — use environment variables in production (see `.env.example`)
+
+---
+
+## Known State
+
+- WhatsappController is an empty shell — not yet implemented
+- TestesController exposes destructive endpoints — should be protected/removed in production
+- Services not yet on IRepositorio: AgendamentoApp, AutenticacaoApp, UsuarioApp, MensalistaApp, RelatorioApp, HorarioApp, TokenApp, EmailApp, ExcecaoApp, ConfiguracaoBarbeariaApp, TenantAdminApp
+- No automated tests exist in this repository
+- Migration history: 20260228 (initial) → 20260406 (performance indexes)

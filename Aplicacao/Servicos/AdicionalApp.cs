@@ -1,22 +1,30 @@
 using BarbeariaRocha.Aplicacao.Contratos;
-using BarbeariaRocha.Infraestrutura.Contexto;
 using BarbeariaRocha.Infraestrutura.MultiTenancy;
+using BarbeariaRocha.Infraestrutura.Repositorios;
 using BarbeariaRocha.Modelos.Entidades;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace BarbeariaRocha.Aplicacao.Servicos
 {
-    public class AdicionalApp(Contexto contexto, ITenantService tenantService) : IAdicionalApp
+    public class AdicionalApp(IRepositorio<Adicional> repositorio, ITenantService tenantService, IMemoryCache cache) : IAdicionalApp
     {
-        private readonly Contexto _contexto = contexto;
-        private readonly ITenantService _tenantService = tenantService;
+        private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(10);
 
         public List<object> ListarAdicionais()
         {
-            var tenantId = _tenantService.ObterTenantId();
-            return _contexto.Adicional
+            var tenantId = tenantService.ObterTenantId();
+            var cacheKey = $"adicionais:{tenantId}";
+
+            if (cache.TryGetValue(cacheKey, out List<object>? cached) && cached != null)
+                return cached;
+
+            var resultado = repositorio.Query()
                 .Where(a => a.TenantId == tenantId && !a.Excluido)
                 .Select(a => (object)new { id = a.Id, nome = a.Nome, valor = a.Valor })
                 .ToList();
+
+            cache.Set(cacheKey, resultado, CacheDuration);
+            return resultado;
         }
 
         public void CriarAdicional(string nome, decimal valor)
@@ -27,9 +35,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             if (valor <= 0)
                 throw new Exception("O valor do adicional deve ser maior que zero.");
 
-            var tenantId = _tenantService.ObterTenantId();
+            var tenantId = tenantService.ObterTenantId();
 
-            var duplicado = _contexto.Adicional
+            var duplicado = repositorio.Query()
                 .Any(a => a.TenantId == tenantId && a.Nome.ToLower() == nome.ToLower().Trim() && !a.Excluido);
 
             if (duplicado)
@@ -42,18 +50,22 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 Valor = valor
             };
 
-            _contexto.Adicional.Add(adicional);
-            _contexto.SaveChanges();
+            repositorio.AdicionarAsync(adicional).GetAwaiter().GetResult();
+            repositorio.SalvarAsync().GetAwaiter().GetResult();
+            cache.Remove($"adicionais:{tenantId}");
         }
 
         public void DeletarAdicional(int id)
         {
-            var tenantId = _tenantService.ObterTenantId();
-            var adicional = _contexto.Adicional.FirstOrDefault(a => a.Id == id && a.TenantId == tenantId)
+            var tenantId = tenantService.ObterTenantId();
+            var adicional = repositorio.Query()
+                .FirstOrDefault(a => a.Id == id && a.TenantId == tenantId)
                 ?? throw new Exception("Adicional não encontrado.");
 
             adicional.Excluido = true;
-            _contexto.SaveChanges();
+            repositorio.Atualizar(adicional);
+            repositorio.SalvarAsync().GetAwaiter().GetResult();
+            cache.Remove($"adicionais:{tenantId}");
         }
     }
 }

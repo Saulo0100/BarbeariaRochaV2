@@ -11,10 +11,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BarbeariaRocha.Aplicacao.Servicos
 {
-    public class AgendamentoApp(Contexto contexto, ITenantService tenantService) : IAgendamentoApp
+    public class AgendamentoApp(Contexto contexto, ITenantService tenantService, IWhatsappService whatsapp) : IAgendamentoApp
     {
         private readonly Contexto _contexto = contexto;
         private readonly ITenantService _tenantService = tenantService;
+        private readonly IWhatsappService _whatsapp = whatsapp;
 
         public AgendamentoDetalheResponse AgendamentoAtual(int barbeiroId)
         {
@@ -677,7 +678,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
             if (tokenAtivo != null && !tokenAtivo.Reenviado)
             {
-                HelperGenerico.EnviarMensagem(tokenAtivo.Codigo.ToString(), numero);
+                _whatsapp.EnviarMensagemAsync(tokenAtivo.Codigo.ToString(), numero).GetAwaiter().GetResult();
                 tokenAtivo.Reenviado = true;
                 _contexto.SaveChanges();
                 return;
@@ -688,7 +689,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
             _contexto.CodigoConfirmacao.Add(salvarToken);
             _contexto.SaveChanges();
-            HelperGenerico.EnviarMensagem(codigo.ToString(), numero);
+            _whatsapp.EnviarMensagemAsync(codigo.ToString(), numero).GetAwaiter().GetResult();
         }
 
         public void GerarTokenCancelamento(string numero)
@@ -702,7 +703,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
             if (tokenAtivo != null && !tokenAtivo.Reenviado)
             {
-                HelperGenerico.EnviarMensagem(tokenAtivo.Codigo.ToString(), numero);
+                _whatsapp.EnviarMensagemAsync(tokenAtivo.Codigo.ToString(), numero).GetAwaiter().GetResult();
                 tokenAtivo.Reenviado = true;
                 _contexto.SaveChanges();
                 return;
@@ -713,7 +714,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
             _contexto.CodigoConfirmacao.Add(salvarToken2);
             _contexto.SaveChanges();
-            HelperGenerico.EnviarMensagem(codigo2.ToString(), numero);
+            _whatsapp.EnviarMensagemAsync(codigo2.ToString(), numero).GetAwaiter().GetResult();
         }
 
         public List<AgendamentoDetalheResponse> ListarPendentesPorNumero(string numero, int codigo)

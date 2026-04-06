@@ -4,7 +4,7 @@ namespace BarbeariaRocha.Infraestrutura.Middlewares;
 
 public class TenantValidationMiddleware(RequestDelegate next, ILogger<TenantValidationMiddleware> logger)
 {
-    private static readonly string[] PathsExcluidas = ["/swagger", "/health", "/hangfire", "/favicon.ico"];
+    private static readonly string[] PathsExcluidas = ["/swagger", "/health", "/favicon.ico"];
 
     public async Task InvokeAsync(HttpContext context)
     {

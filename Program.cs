@@ -5,41 +5,59 @@ using BarbeariaRocha.Infraestrutura;
 using BarbeariaRocha.Infraestrutura.Contexto;
 using BarbeariaRocha.Infraestrutura.Middlewares;
 using BarbeariaRocha.Infraestrutura.MultiTenancy;
+using BarbeariaRocha.Infraestrutura.Repositorios;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
+using Serilog.Events;
 using System.Text;
+
+// -------------------- SERILOG --------------------
+
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .Enrich.WithMachineName()
+    .Enrich.WithThreadId()
+    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
+    .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Logging.AddDebug();
+builder.Host.UseSerilog();
 
 // -------------------- MULTI-TENANCY --------------------
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITenantService, TenantService>();
 
-// -------------------- TENANT VALIDATION (BANCO DE DADOS) --------------------
+// -------------------- TENANT VALIDATION --------------------
 
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<ITenantValidationService, TenantValidationService>();
 
 // -------------------- DATABASE --------------------
 
-// Banco de dados único — tenant_id nas tabelas identifica cada estabelecimento.
 builder.Services.AddDbContext<Contexto>((serviceProvider, options) =>
 {
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
+
+// -------------------- HEALTH CHECKS --------------------
+
+builder.Services.AddHealthChecks()
+    .AddCheck("api", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy());
 
 // -------------------- CONTROLLERS --------------------
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-// -------------------- OPENAPI (.NET 10 Nativo) --------------------
+// -------------------- OPENAPI --------------------
+
 if (!builder.Environment.IsProduction())
     builder.Services.AddSwaggerConfiguration();
 
@@ -60,7 +78,12 @@ builder.Services.AddScoped<IConfiguracaoHorarioApp, ConfiguracaoHorarioApp>();
 builder.Services.AddScoped<IAdicionalApp, AdicionalApp>();
 builder.Services.AddScoped<IConfiguracaoBarbeariaApp, ConfiguracaoBarbeariaApp>();
 builder.Services.AddScoped<ITenantAdminApp, TenantAdminApp>();
+builder.Services.AddScoped<IWhatsappService, WhatsappService>();
 builder.Services.AddSingleton<TokenProvider>();
+
+// -------------------- REPOSITORY (generic open-generic) --------------------
+
+builder.Services.AddScoped(typeof(IRepositorio<>), typeof(Repositorio<>));
 
 // -------------------- JWT --------------------
 
@@ -91,30 +114,18 @@ builder.Services.AddAuthorization();
 
 // -------------------- CORS --------------------
 
+var corsOrigins = builder.Configuration.GetSection("CorsOrigins").Get<string[]>()
+    ?? ["https://localhost:44396"];
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("MinhaPoliticaCors", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins(corsOrigins)
               .AllowAnyMethod()
               .AllowAnyHeader();
     });
 });
-
-// -------------------- HANGFIRE --------------------
-
-//builder.Services.AddHangfire(config =>
-//{
-//    config.UsePostgreSqlStorage(options =>
-//    {
-//        options.UseNpgsqlConnection(
-//            builder.Configuration.GetConnectionString("DefaultConnection")
-//        );
-//    })
-//    .UseSimpleAssemblyNameTypeSerializer();
-//});
-
-//builder.Services.AddHangfireServer();
 
 // -------------------- BUILD --------------------
 
@@ -126,6 +137,7 @@ app.UseMiddleware<ExceptionMiddleware>();
 app.UseMiddleware<TenantValidationMiddleware>();
 
 // -------------------- PIPELINE --------------------
+
 if (!builder.Environment.IsProduction())
     app.UseSwaggerConfiguration();
 
@@ -133,9 +145,10 @@ app.UseHttpsRedirection();
 
 app.UseCors("MinhaPoliticaCors");
 
-app.UseAuthentication();   // ⚠ IMPORTANTE (faltava no seu código)
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 app.Run();

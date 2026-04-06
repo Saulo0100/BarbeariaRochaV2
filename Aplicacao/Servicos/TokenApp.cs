@@ -6,10 +6,11 @@ using BarbeariaRocha.Modelos.Entidades;
 
 namespace BarbeariaRocha.Aplicacao.Servicos
 {
-    public class TokenApp(Contexto contexto, ITenantService tenantService) : ITokenApp
+    public class TokenApp(Contexto contexto, ITenantService tenantService, IWhatsappService whatsapp) : ITokenApp
     {
         private readonly Contexto _contexto = contexto;
         private readonly ITenantService _tenantService = tenantService;
+        private readonly IWhatsappService _whatsapp = whatsapp;
 
         public void GerarToken(string numero)
         {
@@ -23,7 +24,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
             if (tokenAtivo != null && !tokenAtivo.Reenviado)
             {
-                HelperGenerico.EnviarMensagem(tokenAtivo.Codigo.ToString(), numero);
+                _whatsapp.EnviarMensagemAsync(tokenAtivo.Codigo.ToString(), numero).GetAwaiter().GetResult();
                 tokenAtivo.Reenviado = true;
                 _contexto.SaveChanges();
                 return;
@@ -34,7 +35,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
             _contexto.CodigoConfirmacao.Add(salvarToken);
             _contexto.SaveChanges();
-            HelperGenerico.EnviarMensagem(codigo.ToString(), numero);
+            _whatsapp.EnviarMensagemAsync(codigo.ToString(), numero).GetAwaiter().GetResult();
         }
     }
 }

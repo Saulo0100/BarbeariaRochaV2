@@ -42,6 +42,8 @@ namespace BarbeariaRocha.Infraestrutura.Mapping
                 .IsRequired()
                 .HasMaxLength(10);
 
+            builder.HasIndex(x => new { x.TenantId, x.Status })
+                .HasDatabaseName("IX_Mensalistas_TenantId_Status");
         }
     }
 }

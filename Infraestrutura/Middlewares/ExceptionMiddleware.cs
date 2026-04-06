@@ -2,37 +2,30 @@
 
 namespace BarbeariaRocha.Infraestrutura.Middlewares;
 
-public class ExceptionMiddleware
+public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger, IWebHostEnvironment env)
 {
-    public readonly RequestDelegate _next;
-    public readonly ILogger<ExceptionMiddleware> _logger;
-
-    public ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
-    {
-        _next = next;
-        _logger = logger;
-    }
-
     public async Task InvokeAsync(HttpContext context)
     {
         try
         {
-            await _next(context); // passa para o próximo middleware
+            await next(context);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro não tratado");
+            logger.LogError(ex, "Erro não tratado na requisição {Method} {Path}", context.Request.Method, context.Request.Path);
 
             context.Response.ContentType = "application/json";
-            context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 
-            var result = new
+            var message = env.IsProduction()
+                ? "Ocorreu um erro interno. Tente novamente mais tarde."
+                : ex.Message;
+
+            await context.Response.WriteAsJsonAsync(new
             {
                 status = context.Response.StatusCode,
-                message = ex.Message
-            };
-
-            await context.Response.WriteAsJsonAsync(result);
+                message
+            });
         }
     }
 }

@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace BarbeariaRocha.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v1/[controller]")]
 public class MensalistaController(IMensalistaApp app) : BaseController
 {
     private readonly IMensalistaApp _app = app;

@@ -4,26 +4,36 @@ using BarbeariaRocha.Infraestrutura.MultiTenancy;
 using BarbeariaRocha.Modelos.Entidades;
 using BarbeariaRocha.Modelos.Request.Horario;
 using BarbeariaRocha.Modelos.Response.Horario;
-using System.Globalization;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace BarbeariaRocha.Aplicacao.Servicos
 {
-    public class ConfiguracaoHorarioApp(Contexto contexto, ITenantService tenantService) : IConfiguracaoHorarioApp
+    public class ConfiguracaoHorarioApp(Contexto contexto, ITenantService tenantService, IMemoryCache cache) : IConfiguracaoHorarioApp
     {
         private readonly Contexto _contexto = contexto;
         private readonly ITenantService _tenantService = tenantService;
+        private readonly IMemoryCache _cache = cache;
+        private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(15);
 
         private static readonly string[] NomesDias = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
 
         public List<ConfiguracaoHorarioResponse> ListarTodos()
         {
             var tenantId = _tenantService.ObterTenantId();
-            return _contexto.ConfiguracaoHorario
+            var cacheKey = $"configuracao-horario:{tenantId}";
+
+            if (_cache.TryGetValue(cacheKey, out List<ConfiguracaoHorarioResponse>? cached) && cached != null)
+                return cached;
+
+            var resultado = _contexto.ConfiguracaoHorario
                 .Where(c => c.TenantId == tenantId)
                 .OrderBy(c => c.DiaSemana)
                 .ToList()
                 .Select(MapearResponse)
                 .ToList();
+
+            _cache.Set(cacheKey, resultado, CacheDuration);
+            return resultado;
         }
 
         public ConfiguracaoHorarioResponse ObterPorDiaSemana(int diaSemana)
@@ -53,6 +63,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
             AplicarRequest(config, request);
             _contexto.SaveChanges();
+            _cache.Remove($"configuracao-horario:{tenantId}");
         }
 
         public void SalvarTodos(List<ConfiguracaoHorarioSalvarRequest> requests)
@@ -77,6 +88,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             }
 
             _contexto.SaveChanges();
+            _cache.Remove($"configuracao-horario:{tenantId}");
         }
 
         private static void ValidarRequest(ConfiguracaoHorarioSalvarRequest request)
