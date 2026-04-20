@@ -93,7 +93,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                     Tipo = TipoMovimentacao.Entrada,
                     Quantidade = request.QuantidadeInicial,
                     Motivo = "Estoque inicial",
-                    DataMovimentacao = DateTime.UtcNow
+                    DataMovimentacao = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
                 };
                 movimentacaoRepo.AdicionarAsync(movimentacao).GetAwaiter().GetResult();
                 movimentacaoRepo.SalvarAsync().GetAwaiter().GetResult();
@@ -175,7 +175,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 Tipo = request.Tipo,
                 Quantidade = request.Quantidade,
                 Motivo = request.Motivo.Trim(),
-                DataMovimentacao = DateTime.UtcNow
+                DataMovimentacao = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
             };
 
             produtoRepo.Atualizar(produto);
@@ -233,7 +233,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                     Tipo = TipoMovimentacao.Saida,
                     Quantidade = venda.Quantidade,
                     Motivo = "Venda em atendimento",
-                    DataMovimentacao = DateTime.UtcNow,
+                    DataMovimentacao = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
                     AgendamentoId = agendamentoId
                 };
 
