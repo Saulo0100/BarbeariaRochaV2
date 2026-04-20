@@ -1,4 +1,5 @@
 using BarbeariaRocha.Aplicacao.Contratos;
+using BarbeariaRocha.Infraestrutura.Excecoes;
 using BarbeariaRocha.Infraestrutura.MultiTenancy;
 using BarbeariaRocha.Infraestrutura.Repositorios;
 using BarbeariaRocha.Modelos.Entidades;
@@ -55,20 +56,20 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         public ProdutoDetalhesResponse Criar(ProdutoCriarRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Nome))
-                throw new Exception("O nome do produto é obrigatório.");
+                throw new AppException("O nome do produto é obrigatório.");
             if (request.Preco <= 0)
-                throw new Exception("O preço deve ser maior que zero.");
+                throw new AppException("O preço deve ser maior que zero.");
             if (request.QuantidadeInicial < 0)
-                throw new Exception("A quantidade inicial não pode ser negativa.");
+                throw new AppException("A quantidade inicial não pode ser negativa.");
             if (request.QuantidadeMinima < 0)
-                throw new Exception("A quantidade mínima não pode ser negativa.");
+                throw new AppException("A quantidade mínima não pode ser negativa.");
 
             var tenantId = tenantService.ObterTenantId();
 
             var duplicado = produtoRepo.Query()
                 .Any(p => p.TenantId == tenantId && p.Nome.ToLower() == request.Nome.ToLower().Trim() && !p.Excluido);
             if (duplicado)
-                throw new Exception("Já existe um produto com este nome.");
+                throw new AppException("Já existe um produto com este nome.");
 
             var produto = new Produto
             {
@@ -113,19 +114,19 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         public void Editar(int id, ProdutoEditarRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Nome))
-                throw new Exception("O nome do produto é obrigatório.");
+                throw new AppException("O nome do produto é obrigatório.");
             if (request.Preco <= 0)
-                throw new Exception("O preço deve ser maior que zero.");
+                throw new AppException("O preço deve ser maior que zero.");
 
             var tenantId = tenantService.ObterTenantId();
             var produto = produtoRepo.Query()
                 .FirstOrDefault(p => p.Id == id && p.TenantId == tenantId && !p.Excluido)
-                ?? throw new Exception("Produto não encontrado.");
+                ?? throw new AppException("Produto não encontrado.");
 
             var duplicado = produtoRepo.Query()
                 .Any(p => p.TenantId == tenantId && p.Nome.ToLower() == request.Nome.ToLower().Trim() && !p.Excluido && p.Id != id);
             if (duplicado)
-                throw new Exception("Já existe um produto com este nome.");
+                throw new AppException("Já existe um produto com este nome.");
 
             produto.Nome = request.Nome.Trim();
             produto.Descricao = request.Descricao?.Trim();
@@ -141,7 +142,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             var tenantId = tenantService.ObterTenantId();
             var produto = produtoRepo.Query()
                 .FirstOrDefault(p => p.Id == id && p.TenantId == tenantId)
-                ?? throw new Exception("Produto não encontrado.");
+                ?? throw new AppException("Produto não encontrado.");
 
             produto.Excluido = true;
             produtoRepo.Atualizar(produto);
@@ -151,17 +152,17 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         public void RegistrarMovimentacao(int produtoId, MovimentacaoCriarRequest request)
         {
             if (request.Quantidade <= 0)
-                throw new Exception("A quantidade deve ser maior que zero.");
+                throw new AppException("A quantidade deve ser maior que zero.");
             if (string.IsNullOrWhiteSpace(request.Motivo))
-                throw new Exception("O motivo é obrigatório.");
+                throw new AppException("O motivo é obrigatório.");
 
             var tenantId = tenantService.ObterTenantId();
             var produto = produtoRepo.Query()
                 .FirstOrDefault(p => p.Id == produtoId && p.TenantId == tenantId && !p.Excluido)
-                ?? throw new Exception("Produto não encontrado.");
+                ?? throw new AppException("Produto não encontrado.");
 
             if (request.Tipo == TipoMovimentacao.Saida && produto.QuantidadeEstoque < request.Quantidade)
-                throw new Exception($"Estoque insuficiente. Disponível: {produto.QuantidadeEstoque}.");
+                throw new AppException($"Estoque insuficiente. Disponível: {produto.QuantidadeEstoque}.");
 
             produto.QuantidadeEstoque = request.Tipo == TipoMovimentacao.Entrada
                 ? produto.QuantidadeEstoque + request.Quantidade
@@ -218,10 +219,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             {
                 var produto = produtoRepo.Query()
                     .FirstOrDefault(p => p.Id == venda.ProdutoId && p.TenantId == tenantId && !p.Excluido)
-                    ?? throw new Exception($"Produto {venda.ProdutoId} não encontrado.");
+                    ?? throw new AppException($"Produto {venda.ProdutoId} não encontrado.");
 
                 if (produto.QuantidadeEstoque < venda.Quantidade)
-                    throw new Exception($"Estoque insuficiente para '{produto.Nome}'. Disponível: {produto.QuantidadeEstoque}.");
+                    throw new AppException($"Estoque insuficiente para '{produto.Nome}'. Disponível: {produto.QuantidadeEstoque}.");
 
                 produto.QuantidadeEstoque -= venda.Quantidade;
 

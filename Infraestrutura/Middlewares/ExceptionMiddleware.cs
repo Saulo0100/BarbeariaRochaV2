@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using BarbeariaRocha.Infraestrutura.Excecoes;
 
 namespace BarbeariaRocha.Infraestrutura.Middlewares;
 
@@ -9,6 +10,17 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
         try
         {
             await next(context);
+        }
+        catch (AppException ex)
+        {
+            context.Response.ContentType = "application/json";
+            context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+
+            await context.Response.WriteAsJsonAsync(new
+            {
+                status = context.Response.StatusCode,
+                message = ex.Message
+            });
         }
         catch (Exception ex)
         {
