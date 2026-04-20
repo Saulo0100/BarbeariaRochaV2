@@ -1,3 +1,4 @@
+using BarbeariaRocha.Infraestrutura.Excecoes;
 using BarbeariaRocha.Aplicacao.Contratos;
 using BarbeariaRocha.Modelos.Entidades;
 using BarbeariaRocha.Modelos.Request.Tenant;
@@ -14,11 +15,11 @@ public class TenantAdminApp(AppContexto contexto) : ITenantAdminApp
     {
         var planoExiste = await contexto.Plano.AnyAsync(p => p.Id == request.PlanoId && p.Ativo);
         if (!planoExiste)
-            throw new Exception("Plano não encontrado ou inativo.");
+            throw new AppException("Plano não encontrado ou inativo.");
 
         var dominioJaExiste = await contexto.TenantDominio.AnyAsync(d => d.Dominio == request.Dominio);
         if (dominioJaExiste)
-            throw new Exception("Já existe um tenant cadastrado com este domínio.");
+            throw new AppException("Já existe um tenant cadastrado com este domínio.");
 
         var tenant = new Tenant
         {
@@ -58,7 +59,7 @@ public class TenantAdminApp(AppContexto contexto) : ITenantAdminApp
 
         var tenantDominio = await contexto.TenantDominio
             .FirstOrDefaultAsync(d => d.Dominio == dominioDecodificado)
-            ?? throw new Exception("Domínio não encontrado.");
+            ?? throw new AppException("Domínio não encontrado.");
 
         var tenantId = tenantDominio.TenantId.ToString();
 
@@ -90,11 +91,11 @@ public class TenantAdminApp(AppContexto contexto) : ITenantAdminApp
     public async Task EditarPlano(Guid tenantId, TenantEditarPlanoRequest request)
     {
         var tenant = await contexto.Tenant.FindAsync(tenantId)
-            ?? throw new Exception("Tenant não encontrado.");
+            ?? throw new AppException("Tenant não encontrado.");
 
         var planoExiste = await contexto.Plano.AnyAsync(p => p.Id == request.PlanoId && p.Ativo);
         if (!planoExiste)
-            throw new Exception("Plano não encontrado ou inativo.");
+            throw new AppException("Plano não encontrado ou inativo.");
 
         tenant.PlanoId = request.PlanoId;
         await contexto.SaveChangesAsync();

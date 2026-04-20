@@ -1,3 +1,4 @@
+using BarbeariaRocha.Infraestrutura.Excecoes;
 using BarbeariaRocha.Aplicacao.Contratos;
 using BarbeariaRocha.Infraestrutura.MultiTenancy;
 using BarbeariaRocha.Infraestrutura.Repositorios;
@@ -30,10 +31,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         public void CriarAdicional(string nome, decimal valor)
         {
             if (string.IsNullOrWhiteSpace(nome))
-                throw new Exception("O nome do adicional é obrigatório.");
+                throw new AppException("O nome do adicional é obrigatório.");
 
             if (valor <= 0)
-                throw new Exception("O valor do adicional deve ser maior que zero.");
+                throw new AppException("O valor do adicional deve ser maior que zero.");
 
             var tenantId = tenantService.ObterTenantId();
 
@@ -41,7 +42,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 .Any(a => a.TenantId == tenantId && a.Nome.ToLower() == nome.ToLower().Trim() && !a.Excluido);
 
             if (duplicado)
-                throw new Exception("Já existe um adicional com este nome.");
+                throw new AppException("Já existe um adicional com este nome.");
 
             var adicional = new Adicional
             {
@@ -60,7 +61,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             var tenantId = tenantService.ObterTenantId();
             var adicional = repositorio.Query()
                 .FirstOrDefault(a => a.Id == id && a.TenantId == tenantId)
-                ?? throw new Exception("Adicional não encontrado.");
+                ?? throw new AppException("Adicional não encontrado.");
 
             adicional.Excluido = true;
             repositorio.Atualizar(adicional);

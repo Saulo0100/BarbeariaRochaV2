@@ -1,3 +1,4 @@
+using BarbeariaRocha.Infraestrutura.Excecoes;
 ﻿using BarbeariaRocha.Aplicacao.Contratos;
 using BarbeariaRocha.Aplicacao.Helper;
 using BarbeariaRocha.Infraestrutura;
@@ -24,7 +25,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             var tenantId = _tenantService.ObterTenantId();
             var usuario = _contexto.Set<Usuario>()
                 .FirstOrDefault(x => x.TenantId == tenantId && x.Id == id && x.Excluido == false)
-                ?? throw new Exception("Usuário não encontrado.");
+                ?? throw new AppException("Usuário não encontrado.");
 
             usuario.Senha = novaSenha;
             _contexto.SaveChanges();
@@ -37,7 +38,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             var tenantId = _tenantService.ObterTenantId();
             var usuario = _contexto.Set<Usuario>()
                 .FirstOrDefault(x => x.TenantId == tenantId && x.Numero == request.Numero && x.Email == request.Email && x.Excluido == false)
-                ?? throw new Exception("Usuário não encontrado com esse número e email.");
+                ?? throw new AppException("Usuário não encontrado com esse número e email.");
 
             var tokenRedefinicao = Guid.NewGuid().ToString();
             usuario.TokenConfirmacao = tokenRedefinicao;
@@ -66,7 +67,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             var tenantId2 = _tenantService.ObterTenantId();
             var usuario = _contexto.Set<Usuario>()
                 .FirstOrDefault(x => x.TenantId == tenantId2 && x.TokenConfirmacao == request.Token && x.Excluido == false)
-                ?? throw new Exception("Token inválido ou expirado.");
+                ?? throw new AppException("Token inválido ou expirado.");
 
             usuario.Senha = request.NovaSenha;
             usuario.TokenConfirmacao = null;
@@ -79,13 +80,13 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             var tenantId3 = _tenantService.ObterTenantId();
             var barbeiro = _contexto.Set<Usuario>()
                             .AsNoTracking()
-                            .FirstOrDefault(x => x.TenantId == tenantId3 && x.Numero == login.Numero && x.Excluido == false) ?? throw new Exception("Usuário não encontrado");
+                            .FirstOrDefault(x => x.TenantId == tenantId3 && x.Numero == login.Numero && x.Excluido == false) ?? throw new AppException("Usuário não encontrado");
 
             if (login.Senha != barbeiro.Senha)
-                throw new Exception("Senha inválida");
+                throw new AppException("Senha inválida");
 
             if (!barbeiro.EmailConfirmado && barbeiro.Perfil == "Cliente")
-                throw new Exception("Confirme seu email antes de fazer login. Verifique sua caixa de entrada.");
+                throw new AppException("Confirme seu email antes de fazer login. Verifique sua caixa de entrada.");
 
             return _token.CreateToken(barbeiro);
         }

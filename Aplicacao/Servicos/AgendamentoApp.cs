@@ -1,3 +1,4 @@
+using BarbeariaRocha.Infraestrutura.Excecoes;
 ﻿using BarbeariaRocha.Aplicacao.Contratos;
 using BarbeariaRocha.Aplicacao.Helper;
 using BarbeariaRocha.Infraestrutura.Contexto;
@@ -30,9 +31,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                            a.Status != AgendamentoStatus.ClienteFaltou.ToString() &&
                            a.Status != AgendamentoStatus.SlotReservado.ToString())
                 .OrderBy(a => a.DataHora)
-                .FirstOrDefault() ?? throw new Exception("Nenhum agendamento ativo encontrado.");
+                .FirstOrDefault() ?? throw new AppException("Nenhum agendamento ativo encontrado.");
 
-            var barbeiro = _contexto.Usuario.Find(agendamento.BarbeiroId) ?? throw new Exception("Barbeiro não encontrado.");
+            var barbeiro = _contexto.Usuario.Find(agendamento.BarbeiroId) ?? throw new AppException("Barbeiro não encontrado.");
             var servico = agendamento.ServicoId.HasValue ? _contexto.Servico.Find(agendamento.ServicoId.Value) : null;
 
             return new AgendamentoDetalheResponse
@@ -54,9 +55,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         public void EditarECompletarAgendamento(int id, AgendamentoEditarRequest request)
         {
             var agendamento = _contexto.Agendamento
-                .FirstOrDefault(a => a.Id == id) ?? throw new Exception("Agendamento não encontrado.");
+                .FirstOrDefault(a => a.Id == id) ?? throw new AppException("Agendamento não encontrado.");
 
-            var novoServico = _contexto.Servico.Find(request.ServicoId) ?? throw new Exception("Serviço não encontrado.");
+            var novoServico = _contexto.Servico.Find(request.ServicoId) ?? throw new AppException("Serviço não encontrado.");
 
             agendamento.ServicoId = novoServico.Id;
 
@@ -81,7 +82,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public void CancelarAgendamento(int id)
         {
-            var agendamento = _contexto.Agendamento.Find(id) ?? throw new Exception("Agendamento não encontrado.");
+            var agendamento = _contexto.Agendamento.Find(id) ?? throw new AppException("Agendamento não encontrado.");
             agendamento.Status = AgendamentoStatus.CanceladoPeloBarbeiro.ToString();
 
             // Cancelar slots complementares e etapas vinculadas
@@ -92,7 +93,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public void MarcarClienteFaltou(int id)
         {
-            var agendamento = _contexto.Agendamento.Find(id) ?? throw new Exception("Agendamento não encontrado.");
+            var agendamento = _contexto.Agendamento.Find(id) ?? throw new AppException("Agendamento não encontrado.");
             agendamento.Status = AgendamentoStatus.ClienteFaltou.ToString();
 
             // Marcar falta em slots complementares e etapas vinculadas
@@ -103,7 +104,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public void CompletarAgendamento(int id, AgendamentoCompletarRequest request)
         {
-            var agendamento = _contexto.Agendamento.Find(id) ?? throw new Exception("Agendamento não encontrado.");
+            var agendamento = _contexto.Agendamento.Find(id) ?? throw new AppException("Agendamento não encontrado.");
             agendamento.Status = AgendamentoStatus.Concluido.ToString();
             agendamento.MetodoPagamento = request.MetodoPagamento.ToString();
 
@@ -127,7 +128,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                                    && t.Numero == request.Numero
                                    && t.Codigo == request.CodigoConfirmacao
                                    && !t.Confirmado
-                                   && t.DtExpiracao.ToUniversalTime() > DateTime.UtcNow) ?? throw new Exception("Código de confirmação inválido ou expirado.");
+                                   && t.DtExpiracao.ToUniversalTime() > DateTime.UtcNow) ?? throw new AppException("Código de confirmação inválido ou expirado.");
 
             tokenValido.Confirmado = true;
 
@@ -149,11 +150,11 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                                         e.Excluido == false &&
                                         e.Data.Date == dataAgendamento &&
                                         (e.BarbeiroId == null || e.BarbeiroId == request.BarbeiroId));
-                throw new Exception($"Não é possível agendar nesta data. Motivo: {excecao?.Descricao}");
+                throw new AppException($"Não é possível agendar nesta data. Motivo: {excecao?.Descricao}");
             }
 
-            var barbeiro = _contexto.Usuario.FirstOrDefault(u => u.Id == request.BarbeiroId && u.TenantId == tenantId) ?? throw new Exception("Barbeiro não encontrado.");
-            var servico = _contexto.Servico.FirstOrDefault(s => s.Id == request.ServicoId && s.TenantId == tenantId) ?? throw new Exception("Serviço não encontrado.");
+            var barbeiro = _contexto.Usuario.FirstOrDefault(u => u.Id == request.BarbeiroId && u.TenantId == tenantId) ?? throw new AppException("Barbeiro não encontrado.");
+            var servico = _contexto.Servico.FirstOrDefault(s => s.Id == request.ServicoId && s.TenantId == tenantId) ?? throw new AppException("Serviço não encontrado.");
 
             var usuarioLogado = _contexto.Usuario.FirstOrDefault(u => u.Id == request.UsuarioId && u.TenantId == tenantId);
 
@@ -178,7 +179,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 // Validar intervalo mínimo
                 var diferencaHoras = (dataEtapa2 - dataEtapa1).TotalHours;
                 if (diferencaHoras < servico.IntervaloMinimoHoras)
-                    throw new Exception($"O intervalo entre as etapas deve ser de pelo menos {servico.IntervaloMinimoHoras} horas.");
+                    throw new AppException($"O intervalo entre as etapas deve ser de pelo menos {servico.IntervaloMinimoHoras} horas.");
 
                 // Para serviços com 2 etapas, cada etapa ocupa seus próprios slots.
                 // Se o tempo > 40min, cada etapa ocupa 2 slots consecutivos (validados pelo tempoTotal).
@@ -273,7 +274,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                             a.DataHora < dataFim);
 
             if (conflito)
-                throw new Exception("O barbeiro já possui um agendamento nesse horário. Por favor, escolha outro horário.");
+                throw new AppException("O barbeiro já possui um agendamento nesse horário. Por favor, escolha outro horário.");
         }
 
         private void CompletarSlotsComplementares(int agendamentoId)
@@ -452,11 +453,11 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         public AgendamentoDetalheResponse ObterPorId(int id)
         {
             var agendamento = _contexto.Agendamento
-                .FirstOrDefault(a => a.Id == id) ?? throw new Exception("Agendamento não encontrado.");
+                .FirstOrDefault(a => a.Id == id) ?? throw new AppException("Agendamento não encontrado.");
 
-            var servicoAgendamento = _contexto.Servico.Find(agendamento.ServicoId) ?? throw new Exception("Serviço não encontrado.");
+            var servicoAgendamento = _contexto.Servico.Find(agendamento.ServicoId) ?? throw new AppException("Serviço não encontrado.");
 
-            var barbeiro = _contexto.Usuario.Find(agendamento.BarbeiroId) ?? throw new Exception("Barbeiro não encontrado.");
+            var barbeiro = _contexto.Usuario.Find(agendamento.BarbeiroId) ?? throw new AppException("Barbeiro não encontrado.");
 
             return new AgendamentoDetalheResponse
             {
@@ -504,11 +505,11 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                                         e.Excluido == false &&
                                         e.Data.Date == dataAgendamento &&
                                         (e.BarbeiroId == null || e.BarbeiroId == request.BarbeiroId));
-                throw new Exception($"Não é possível agendar nesta data. Motivo: {excecao?.Descricao}");
+                throw new AppException($"Não é possível agendar nesta data. Motivo: {excecao?.Descricao}");
             }
 
-            var barbeiro = _contexto.Usuario.FirstOrDefault(u => u.Id == request.BarbeiroId && u.TenantId == tenantId) ?? throw new Exception("Barbeiro não encontrado.");
-            var servico = _contexto.Servico.FirstOrDefault(s => s.Id == request.ServicoId && s.TenantId == tenantId) ?? throw new Exception("Serviço não encontrado.");
+            var barbeiro = _contexto.Usuario.FirstOrDefault(u => u.Id == request.BarbeiroId && u.TenantId == tenantId) ?? throw new AppException("Barbeiro não encontrado.");
+            var servico = _contexto.Servico.FirstOrDefault(s => s.Id == request.ServicoId && s.TenantId == tenantId) ?? throw new AppException("Serviço não encontrado.");
 
             // Buscar usuário pelo número (se existir)
             var usuarioCliente = _contexto.Usuario.FirstOrDefault(u => u.TenantId == tenantId && u.Numero == request.Numero && !u.Excluido);
@@ -527,7 +528,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
                 var diferencaHoras = (dataEtapa2 - dataEtapa1).TotalHours;
                 if (diferencaHoras < servico.IntervaloMinimoHoras)
-                    throw new Exception($"O intervalo entre as etapas deve ser de pelo menos {servico.IntervaloMinimoHoras} horas.");
+                    throw new AppException($"O intervalo entre as etapas deve ser de pelo menos {servico.IntervaloMinimoHoras} horas.");
 
                 ValidarConflito(request.BarbeiroId, dataEtapa1, tempoTotal);
                 ValidarConflito(request.BarbeiroId, dataEtapa2, tempoTotal);
@@ -602,10 +603,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         public void CancelarAgendamentoComoCliente(int agendamentoId, int clienteId)
         {
             var agendamento = _contexto.Agendamento.Find(agendamentoId)
-                ?? throw new Exception("Agendamento não encontrado.");
+                ?? throw new AppException("Agendamento não encontrado.");
 
             if (agendamento.UsuarioId != clienteId)
-                throw new Exception("Este agendamento não pertence a este cliente.");
+                throw new AppException("Este agendamento não pertence a este cliente.");
 
             var statusCancelavel = new[]
             {
@@ -616,7 +617,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             };
 
             if (!statusCancelavel.Contains(agendamento.Status))
-                throw new Exception("Este agendamento não pode ser cancelado.");
+                throw new AppException("Este agendamento não pode ser cancelado.");
 
             agendamento.Status = AgendamentoStatus.CanceladoPeloCliente.ToString();
 
@@ -678,10 +679,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 .FirstOrDefault();
 
             if (ultimoAgendamento != null && ultimoAgendamento.DataHora.AddDays(7) >= DateTime.UtcNow)
-                throw new Exception("Seu ultimo corte foi a menos de 7 dias");
+                throw new AppException("Seu ultimo corte foi a menos de 7 dias");
 
             if (tokenAtivo != null && tokenAtivo.Reenviado)
-                throw new Exception("Já foi enviado um código de confirmação. Por favor, verifique seu telefone.");
+                throw new AppException("Já foi enviado um código de confirmação. Por favor, verifique seu telefone.");
 
             if (tokenAtivo != null && !tokenAtivo.Reenviado)
             {
@@ -706,7 +707,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 .FirstOrDefault(t => t.TenantId == tenantId && t.Numero == numero && !t.Confirmado && t.DtExpiracao.ToUniversalTime() > DateTime.UtcNow);
 
             if (tokenAtivo != null && tokenAtivo.Reenviado)
-                throw new Exception("Já foi enviado um código de confirmação. Por favor, verifique seu telefone.");
+                throw new AppException("Já foi enviado um código de confirmação. Por favor, verifique seu telefone.");
 
             if (tokenAtivo != null && !tokenAtivo.Reenviado)
             {
@@ -733,7 +734,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                                     && t.Codigo == codigo
                                     && !t.Confirmado
                                     && t.DtExpiracao.ToUniversalTime() > DateTime.UtcNow)
-                ?? throw new Exception("Código inválido ou expirado.");
+                ?? throw new AppException("Código inválido ou expirado.");
 
             var statusPendentes = new[]
             {
@@ -778,7 +779,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                                     && t.Codigo == codigo
                                     && !t.Confirmado
                                     && t.DtExpiracao.ToUniversalTime() > DateTime.UtcNow)
-                ?? throw new Exception("Código inválido ou expirado.");
+                ?? throw new AppException("Código inválido ou expirado.");
 
             var statusPendentes = new[]
             {
@@ -825,13 +826,13 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                                     && t.Codigo == codigo
                                     && !t.Confirmado
                                     && t.DtExpiracao.ToUniversalTime() > DateTime.UtcNow)
-                ?? throw new Exception("Código inválido ou expirado.");
+                ?? throw new AppException("Código inválido ou expirado.");
 
             var agendamento = _contexto.Agendamento.Find(agendamentoId)
-                ?? throw new Exception("Agendamento não encontrado.");
+                ?? throw new AppException("Agendamento não encontrado.");
 
             if (agendamento.NumeroCliente != numero)
-                throw new Exception("Este agendamento não pertence a este número.");
+                throw new AppException("Este agendamento não pertence a este número.");
 
             agendamento.Status = AgendamentoStatus.CanceladoPeloCliente.ToString();
 

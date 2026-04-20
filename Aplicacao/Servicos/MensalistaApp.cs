@@ -1,3 +1,4 @@
+using BarbeariaRocha.Infraestrutura.Excecoes;
 ﻿using BarbeariaRocha.Aplicacao.Contratos;
 using BarbeariaRocha.Infraestrutura.Contexto;
 using BarbeariaRocha.Infraestrutura.MultiTenancy;
@@ -36,7 +37,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                         && m.Status == MensalistaStatus.Ativo.ToString());
 
                 if (duplicado)
-                    throw new Exception("Já existe um mensalista ativo para este barbeiro neste dia e horário.");
+                    throw new AppException("Já existe um mensalista ativo para este barbeiro neste dia e horário.");
             }
 
             var mensalista = new Mensalista
@@ -68,7 +69,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         {
             var tenantId = _tenantService.ObterTenantId();
             var mensalista = _contexto.Mensalista.FirstOrDefault(m => m.Id == idMensalista && m.TenantId == tenantId)
-                ?? throw new Exception("Mensalista não encontrado.");
+                ?? throw new AppException("Mensalista não encontrado.");
 
             // Cancelar agendamentos futuros auto-gerados deste mensalista
             var agora = DateTime.Now;
@@ -144,10 +145,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         {
             var tenantId = _tenantService.ObterTenantId();
             var mensalista = _contexto.Mensalista.FirstOrDefault(m => m.Id == request.MensalistaId && m.TenantId == tenantId)
-                ?? throw new Exception("Mensalista não encontrado.");
+                ?? throw new AppException("Mensalista não encontrado.");
 
             if (mensalista.Status != MensalistaStatus.Ativo.ToString())
-                throw new Exception("Mensalista não está ativo.");
+                throw new AppException("Mensalista não está ativo.");
 
             var corte = new MensalistaCorte
             {
@@ -187,7 +188,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         public void DeletarCorte(int corteId)
         {
             var corte = _contexto.MensalistaCorte.Find(corteId)
-                ?? throw new Exception("Corte não encontrado.");
+                ?? throw new AppException("Corte não encontrado.");
 
             _contexto.MensalistaCorte.Remove(corte);
             _contexto.SaveChanges();

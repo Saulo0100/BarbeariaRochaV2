@@ -1,3 +1,4 @@
+using BarbeariaRocha.Infraestrutura.Excecoes;
 using BarbeariaRocha.Aplicacao.Contratos;
 using BarbeariaRocha.Infraestrutura.MultiTenancy;
 using BarbeariaRocha.Infraestrutura.Repositorios;
@@ -49,7 +50,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             var tenantId = tenantService.ObterTenantId();
             var servico = repositorio.Query()
                 .FirstOrDefault(s => s.Id == id && s.TenantId == tenantId)
-                ?? throw new Exception("Serviço não encontrado.");
+                ?? throw new AppException("Serviço não encontrado.");
 
             servico.Excluido = true;
             repositorio.Atualizar(servico);

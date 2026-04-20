@@ -1,3 +1,4 @@
+using BarbeariaRocha.Infraestrutura.Excecoes;
 using BarbeariaRocha.Aplicacao.Contratos;
 using BarbeariaRocha.Aplicacao.Helper;
 using BarbeariaRocha.Infraestrutura.Contexto;
@@ -77,7 +78,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         {
             var diaSemana = CultureInfo.GetCultureInfo("pt-BR").DateTimeFormat.GetDayName(data.DayOfWeek);
             var config = ObterConfigDia(data);
-            var servico = _contexto.Servico.Find(servicoId) ?? throw new Exception("Serviço não encontrado.");
+            var servico = _contexto.Servico.Find(servicoId) ?? throw new AppException("Serviço não encontrado.");
 
             if (!config.Aberto)
             {
@@ -170,10 +171,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         public HorariosDisponiveisServicoResponse ObterHorariosEtapa2(int barbeiroId, DateTime data, int servicoId, string horaEtapa1)
         {
             var diaSemana = CultureInfo.GetCultureInfo("pt-BR").DateTimeFormat.GetDayName(data.DayOfWeek);
-            var servico = _contexto.Servico.Find(servicoId) ?? throw new Exception("Serviço não encontrado.");
+            var servico = _contexto.Servico.Find(servicoId) ?? throw new AppException("Serviço não encontrado.");
 
             if (!servico.RequerDuasEtapas)
-                throw new Exception("Este serviço não requer duas etapas.");
+                throw new AppException("Este serviço não requer duas etapas.");
 
             var config = ObterConfigDia(data);
             var todosHorarios = HelperGenerico.MontarHorariosPorConfig(config);

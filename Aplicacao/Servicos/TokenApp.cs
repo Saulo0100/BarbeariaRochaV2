@@ -1,3 +1,4 @@
+using BarbeariaRocha.Infraestrutura.Excecoes;
 ﻿using BarbeariaRocha.Aplicacao.Contratos;
 using BarbeariaRocha.Aplicacao.Helper;
 using BarbeariaRocha.Infraestrutura.Contexto;
@@ -20,7 +21,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 .FirstOrDefault(t => t.TenantId == tenantId && t.Numero == numero && !t.Confirmado && t.DtExpiracao.ToUniversalTime() > DateTime.UtcNow);
 
             if (tokenAtivo != null && tokenAtivo.Reenviado)
-                throw new Exception("Já foi enviado um código de confirmação. Por favor, verifique seu telefone.");
+                throw new AppException("Já foi enviado um código de confirmação. Por favor, verifique seu telefone.");
 
             if (tokenAtivo != null && !tokenAtivo.Reenviado)
             {

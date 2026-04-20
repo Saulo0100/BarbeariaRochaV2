@@ -1,3 +1,4 @@
+using BarbeariaRocha.Infraestrutura.Excecoes;
 using BarbeariaRocha.Aplicacao.Contratos;
 using BarbeariaRocha.Infraestrutura.Contexto;
 using BarbeariaRocha.Infraestrutura.MultiTenancy;
@@ -21,7 +22,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             {
                 var barbeiro = _contexto.Usuario.FirstOrDefault(u => u.Id == request.BarbeiroId.Value && u.TenantId == tenantId);
                 if (barbeiro == null || barbeiro.Excluido)
-                    throw new Exception("Barbeiro não encontrado.");
+                    throw new AppException("Barbeiro não encontrado.");
 
                 var excecaoExistente = _contexto.Excecao
                                         .Where(x => x.TenantId == tenantId
@@ -29,7 +30,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                                         && x.Data.Date == request.Data.Date)
                                         .FirstOrDefault();
                 if (excecaoExistente != null)
-                    throw new Exception("Já existe uma exceção para esse dia e barbeiro cadastradas.");
+                    throw new AppException("Já existe uma exceção para esse dia e barbeiro cadastradas.");
 
             }
 
@@ -42,7 +43,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         public void DeletarExcecao(int id)
         {
             var tenantId = _tenantService.ObterTenantId();
-            var excecao = _contexto.Excecao.FirstOrDefault(e => e.Id == id && e.TenantId == tenantId) ?? throw new Exception("Exceção não encontrada.");
+            var excecao = _contexto.Excecao.FirstOrDefault(e => e.Id == id && e.TenantId == tenantId) ?? throw new AppException("Exceção não encontrada.");
             excecao.Excluido = true;
             _contexto.SaveChanges();
         }
@@ -50,10 +51,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         public ExcecaoDetalhesResponse ObterPorId(int id)
         {
             var tenantId = _tenantService.ObterTenantId();
-            var excecao = _contexto.Excecao.FirstOrDefault(e => e.Id == id && e.TenantId == tenantId) ?? throw new Exception("Exceção não encontrada.");
+            var excecao = _contexto.Excecao.FirstOrDefault(e => e.Id == id && e.TenantId == tenantId) ?? throw new AppException("Exceção não encontrada.");
 
             if (excecao.Excluido)
-                throw new Exception("Exceção não encontrada.");
+                throw new AppException("Exceção não encontrada.");
 
             string? nomeBarbeiro = null;
             if (excecao.BarbeiroId.HasValue)

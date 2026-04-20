@@ -1,3 +1,4 @@
+using BarbeariaRocha.Infraestrutura.Excecoes;
 using BarbeariaRocha.Aplicacao.Contratos;
 using BarbeariaRocha.Infraestrutura.Contexto;
 using BarbeariaRocha.Infraestrutura.MultiTenancy;
@@ -41,7 +42,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             var tenantId = _tenantService.ObterTenantId();
             var config = _contexto.ConfiguracaoHorario
                 .FirstOrDefault(c => c.TenantId == tenantId && c.DiaSemana == diaSemana)
-                ?? throw new Exception($"Configuração para o dia {diaSemana} não encontrada.");
+                ?? throw new AppException($"Configuração para o dia {diaSemana} não encontrada.");
 
             return MapearResponse(config);
         }
@@ -94,21 +95,21 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         private static void ValidarRequest(ConfiguracaoHorarioSalvarRequest request)
         {
             if (request.DiaSemana < 0 || request.DiaSemana > 6)
-                throw new Exception("DiaSemana deve ser entre 0 (Domingo) e 6 (Sábado).");
+                throw new AppException("DiaSemana deve ser entre 0 (Domingo) e 6 (Sábado).");
 
             if (request.IntervaloMinutos <= 0)
-                throw new Exception("IntervaloMinutos deve ser maior que zero.");
+                throw new AppException("IntervaloMinutos deve ser maior que zero.");
 
             if (request.Aberto)
             {
                 if (string.IsNullOrWhiteSpace(request.HoraInicio))
-                    throw new Exception("HoraInicio é obrigatório quando o dia está aberto.");
+                    throw new AppException("HoraInicio é obrigatório quando o dia está aberto.");
                 if (string.IsNullOrWhiteSpace(request.HoraFim))
-                    throw new Exception("HoraFim é obrigatório quando o dia está aberto.");
+                    throw new AppException("HoraFim é obrigatório quando o dia está aberto.");
                 if (!string.IsNullOrWhiteSpace(request.AlmocoInicio) && string.IsNullOrWhiteSpace(request.AlmocoFim))
-                    throw new Exception("AlmocoFim é obrigatório quando AlmocoInicio é informado.");
+                    throw new AppException("AlmocoFim é obrigatório quando AlmocoInicio é informado.");
                 if (!string.IsNullOrWhiteSpace(request.AlmocoFim) && string.IsNullOrWhiteSpace(request.AlmocoInicio))
-                    throw new Exception("AlmocoInicio é obrigatório quando AlmocoFim é informado.");
+                    throw new AppException("AlmocoInicio é obrigatório quando AlmocoFim é informado.");
             }
         }
 

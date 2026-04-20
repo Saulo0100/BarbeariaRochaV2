@@ -1,3 +1,4 @@
+using BarbeariaRocha.Infraestrutura.Excecoes;
 ﻿using BarbeariaRocha.Aplicacao.Contratos;
 using BarbeariaRocha.Infraestrutura.Contexto;
 using BarbeariaRocha.Infraestrutura.MultiTenancy;
@@ -21,13 +22,13 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         {
             // Apenas clientes podem se auto-cadastrar
             if (request.Perfil != Perfil.Cliente)
-                throw new Exception("Apenas clientes podem se cadastrar.");
+                throw new AppException("Apenas clientes podem se cadastrar.");
 
             var tenantId = _tenantService.ObterTenantId();
 
             var existente = _contexto.Usuario.FirstOrDefault(u => u.TenantId == tenantId && u.Numero == request.Numero && !u.Excluido);
             if (existente != null)
-                throw new Exception("Já existe um usuário com este número.");
+                throw new AppException("Já existe um usuário com este número.");
 
             var usuario = new Usuario(request);
             usuario.TenantId = tenantId;
@@ -44,7 +45,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             }
             catch
             {
-                throw new Exception("Usuário criado, mas falha ao enviar email de confirmação. Por favor, entre em contato com o suporte.");
+                throw new AppException("Usuário criado, mas falha ao enviar email de confirmação. Por favor, entre em contato com o suporte.");
             }
         }
 
@@ -54,7 +55,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
             var existente = _contexto.Usuario.FirstOrDefault(u => u.TenantId == tenantId && u.Numero == request.Numero && !u.Excluido);
             if (existente != null)
-                throw new Exception("Já existe um usuário com este número.");
+                throw new AppException("Já existe um usuário com este número.");
 
             var perfisBarbeiro = new[] { Perfil.Barbeiro.ToString(), Perfil.BarbeiroAdministrador.ToString() };
             if (perfisBarbeiro.Contains(request.Perfil.ToString()) && Guid.TryParse(tenantId, out var tenantGuid))
@@ -62,7 +63,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 var tenant = _contexto.Tenant
                     .Include(t => t.Plano)
                     .FirstOrDefault(t => t.Id == tenantGuid)
-                    ?? throw new Exception("Tenant não encontrado.");
+                    ?? throw new AppException("Tenant não encontrado.");
 
                 var totalBarbeiros = _contexto.Usuario.Count(u =>
                     u.TenantId == tenantId &&
@@ -70,7 +71,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                     !u.Excluido);
 
                 if (totalBarbeiros >= tenant.Plano.MaxBarbeiros)
-                    throw new Exception("Seu plano atual não permite cadastrar mais barbeiros.");
+                    throw new AppException("Seu plano atual não permite cadastrar mais barbeiros.");
             }
 
             var usuario = new Usuario(request);
@@ -100,7 +101,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         {
             var tenantId = _tenantService.ObterTenantId();
             var usuario = _contexto.Usuario.FirstOrDefault(u => u.TenantId == tenantId && u.TokenConfirmacao == token && !u.Excluido)
-                ?? throw new Exception("Token inválido ou expirado.");
+                ?? throw new AppException("Token inválido ou expirado.");
 
             usuario.EmailConfirmado = true;
             usuario.TokenConfirmacao = null;
@@ -109,7 +110,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public void Editar(int id, UsuarioEditarRequest request)
         {
-            var usuario = _contexto.Usuario.Find(id) ?? throw new Exception();
+            var usuario = _contexto.Usuario.Find(id) ?? throw new AppException("Usuário não encontrado.");
 
             if (!string.IsNullOrWhiteSpace(request.Nome))
                 usuario.Nome = request.Nome;
@@ -140,7 +141,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public void Excluir(int id)
         {
-            var usuario = _contexto.Usuario.Find(id) ?? throw new Exception();
+            var usuario = _contexto.Usuario.Find(id) ?? throw new AppException("Usuário não encontrado.");
             usuario.Excluido = true;
             _contexto.SaveChanges();
         }
@@ -148,7 +149,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
         public void EditarPorcentagem(int id, decimal porcentagem)
         {
             var tenantId = _tenantService.ObterTenantId();
-            var usuario = _contexto.Usuario.FirstOrDefault(u => u.Id == id && u.TenantId == tenantId) ?? throw new Exception("Usuário não encontrado.");
+            var usuario = _contexto.Usuario.FirstOrDefault(u => u.Id == id && u.TenantId == tenantId) ?? throw new AppException("Usuário não encontrado.");
             if (porcentagem < 0 || porcentagem > 100)
                 throw new ArgumentException("A porcentagem deve estar entre 0 e 100.");
 
@@ -186,7 +187,7 @@ namespace BarbeariaRocha.Aplicacao.Servicos
 
         public UsuarioDetalhesResponse ObterPorId(int id)
         {
-            var usuario = _contexto.Usuario.Find(id) ?? throw new Exception();
+            var usuario = _contexto.Usuario.Find(id) ?? throw new AppException("Usuário não encontrado.");
 
             return new UsuarioDetalhesResponse
             {
