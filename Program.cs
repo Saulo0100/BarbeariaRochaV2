@@ -76,6 +76,7 @@ builder.Services.AddScoped<IRelatorioApp, RelatorioApp>();
 builder.Services.AddScoped<IHorarioApp, HorarioApp>();
 builder.Services.AddScoped<IConfiguracaoHorarioApp, ConfiguracaoHorarioApp>();
 builder.Services.AddScoped<IAdicionalApp, AdicionalApp>();
+builder.Services.AddScoped<IProdutoApp, ProdutoApp>();
 builder.Services.AddScoped<IConfiguracaoBarbeariaApp, ConfiguracaoBarbeariaApp>();
 builder.Services.AddScoped<ITenantAdminApp, TenantAdminApp>();
 builder.Services.AddScoped<IWhatsappService, WhatsappService>();

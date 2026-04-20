@@ -12,5 +12,6 @@ namespace BarbeariaRocha.Aplicacao.Contratos
         IEnumerable<FaturamentoPorMetodoResponse> ObterFaturamentoPorMetodo(RelatorioFiltroRequest filtro);
         IEnumerable<RelatorioBarbeiroResponse> ObterRelatorioPorBarbeiro(RelatorioFiltroRequest filtro);
         RelatorioGeralResponse ObterRelatorioGeralBarbeiro(RelatorioFiltroRequest filtro, int barbeiroId);
+        IEnumerable<ProdutoMaisVendidoResponse> ObterProdutosMaisVendidos(RelatorioFiltroRequest filtro, int top = 10);
     }
 }

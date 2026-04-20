@@ -16,5 +16,9 @@ namespace BarbeariaRocha.Modelos.Response.Relatorio
         public decimal TaxaFaltas { get; set; }
         public decimal TaxaCancelamento { get; set; }
         public decimal TaxaConclusao { get; set; }
+        public decimal FaturamentoProdutosTotal { get; set; }
+        public decimal FaturamentoProdutosHoje { get; set; }
+        public decimal FaturamentoProdutosSemana { get; set; }
+        public decimal FaturamentoProdutosMes { get; set; }
     }
 }

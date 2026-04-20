@@ -11,11 +11,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BarbeariaRocha.Aplicacao.Servicos
 {
-    public class AgendamentoApp(Contexto contexto, ITenantService tenantService, IWhatsappService whatsapp) : IAgendamentoApp
+    public class AgendamentoApp(Contexto contexto, ITenantService tenantService, IWhatsappService whatsapp, IProdutoApp produtoApp) : IAgendamentoApp
     {
         private readonly Contexto _contexto = contexto;
         private readonly ITenantService _tenantService = tenantService;
         private readonly IWhatsappService _whatsapp = whatsapp;
+        private readonly IProdutoApp _produtoApp = produtoApp;
 
         public AgendamentoDetalheResponse AgendamentoAtual(int barbeiroId)
         {
@@ -73,6 +74,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             CompletarSlotsComplementares(id);
 
             _contexto.SaveChanges();
+
+            if (request.Produtos != null && request.Produtos.Count > 0)
+                _produtoApp.RegistrarVendas(id, request.Produtos);
         }
 
         public void CancelarAgendamento(int id)
@@ -110,6 +114,9 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             CompletarSlotsComplementares(id);
 
             _contexto.SaveChanges();
+
+            if (request.Produtos != null && request.Produtos.Count > 0)
+                _produtoApp.RegistrarVendas(id, request.Produtos);
         }
 
         public void CriarAgendamento(AgendamentoCriarRequest request)

@@ -89,5 +89,17 @@ namespace BarbeariaRocha.Controllers
             var resultado = _app.ObterRelatorioPorBarbeiro(filtro);
             return Ok(resultado);
         }
+
+        /// <summary>
+        /// Retorna os produtos mais vendidos em atendimentos, ordenados por quantidade.
+        /// </summary>
+        [HttpGet("produtos-mais-vendidos")]
+        public ActionResult<IEnumerable<ProdutoMaisVendidoResponse>> ObterProdutosMaisVendidos(
+            [FromQuery] RelatorioFiltroRequest filtro,
+            [FromQuery] int top = 10)
+        {
+            var resultado = _app.ObterProdutosMaisVendidos(filtro, top);
+            return Ok(resultado);
+        }
     }
 }

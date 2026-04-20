@@ -40,6 +40,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 .Where(x => idsAgendamentos.Contains(x.AgendamentoId))
                 .ToList();
 
+            var produtosVendidos = _contexto.AgendamentoProduto
+                .Where(x => idsAgendamentos.Contains(x.AgendamentoId))
+                .ToList();
+
             var hoje = DateTime.Today;
             var inicioSemana = hoje.AddDays(-(int)hoje.DayOfWeek);
             var inicioMes = new DateTime(hoje.Year, hoje.Month, 1);
@@ -62,6 +66,15 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             var cortesMes = todosConcluidos.Where(a => a.DataHora.Date >= inicioMes).ToList();
             var cortesMesIds = cortesMes.Select(h => h.Id).ToList();
             var adicionaisMes = _contexto.AgendamentoAdicional.Where(x => cortesMesIds.Contains(x.AgendamentoId)).ToList();
+
+            var produtosHoje = produtosVendidos.Where(p => cortesHojeIds.Contains(p.AgendamentoId)).ToList();
+            var produtosSemana = produtosVendidos.Where(p => cortesSemanaIds.Contains(p.AgendamentoId)).ToList();
+            var produtosMes = produtosVendidos.Where(p => cortesMesIds.Contains(p.AgendamentoId)).ToList();
+
+            var faturamentoProdutosTotal = produtosVendidos.Sum(p => p.PrecoProduto * p.Quantidade);
+            var faturamentoProdutosHoje = produtosHoje.Sum(p => p.PrecoProduto * p.Quantidade);
+            var faturamentoProdutosSemana = produtosSemana.Sum(p => p.PrecoProduto * p.Quantidade);
+            var faturamentoProdutosMes = produtosMes.Sum(p => p.PrecoProduto * p.Quantidade);
 
             var faturamentoHoje = cortesHoje.Sum(a =>
                 a.ServicoId.HasValue ? (_contexto.Servico.Find(a.ServicoId.Value)?.Valor ?? 0) : 0)
@@ -98,6 +111,10 @@ namespace BarbeariaRocha.Aplicacao.Servicos
                 FaturamentoHoje = faturamentoHoje,
                 FaturamentoSemana = faturamentoSemana,
                 FaturamentoMes = faturamentoMes,
+                FaturamentoProdutosTotal = faturamentoProdutosTotal,
+                FaturamentoProdutosHoje = faturamentoProdutosHoje,
+                FaturamentoProdutosSemana = faturamentoProdutosSemana,
+                FaturamentoProdutosMes = faturamentoProdutosMes,
                 AgendamentosPendentes = pendentes,
                 CancelamentosTotal = cancelados,
                 ClientesFaltaram = faltaram,
@@ -344,6 +361,43 @@ namespace BarbeariaRocha.Aplicacao.Servicos
             }).OrderByDescending(r => r.TotalAtendimentos).ToList();
 
             return resultado;
+        }
+
+        public IEnumerable<ProdutoMaisVendidoResponse> ObterProdutosMaisVendidos(RelatorioFiltroRequest filtro, int top = 10)
+        {
+            var tenantId = _tenantService.ObterTenantId();
+            var query = _contexto.Agendamento
+                .Where(a => a.TenantId == tenantId)
+                .Where(a => a.Status == AgendamentoStatus.Concluido.ToString())
+                .AsQueryable();
+
+            if (filtro.BarbeiroId.HasValue)
+                query = query.Where(a => a.BarbeiroId == filtro.BarbeiroId.Value);
+
+            if (filtro.DataInicio.HasValue)
+                query = query.Where(a => a.DataHora >= filtro.DataInicio.Value);
+
+            if (filtro.DataFim.HasValue)
+                query = query.Where(a => a.DataHora < filtro.DataFim.Value.AddDays(1));
+
+            var idsAgendamentos = query.Select(a => a.Id).ToList();
+
+            var produtos = _contexto.AgendamentoProduto
+                .Where(x => idsAgendamentos.Contains(x.AgendamentoId))
+                .ToList();
+
+            return produtos
+                .GroupBy(p => p.ProdutoId)
+                .Select(g => new ProdutoMaisVendidoResponse
+                {
+                    ProdutoId = g.Key,
+                    NomeProduto = g.First().NomeProduto,
+                    QuantidadeTotal = g.Sum(p => p.Quantidade),
+                    ValorTotal = g.Sum(p => p.PrecoProduto * p.Quantidade)
+                })
+                .OrderByDescending(p => p.QuantidadeTotal)
+                .Take(top)
+                .ToList();
         }
 
         public RelatorioGeralResponse ObterRelatorioGeralBarbeiro(RelatorioFiltroRequest filtro, int barbeiroId)

@@ -1,4 +1,5 @@
-﻿using BarbeariaRocha.Modelos.Enums;
+using BarbeariaRocha.Modelos.Enums;
+using BarbeariaRocha.Modelos.Request.Produto;
 
 namespace BarbeariaRocha.Modelos.Request.Agendamento
 {
@@ -6,10 +7,7 @@ namespace BarbeariaRocha.Modelos.Request.Agendamento
     {
         public required MetodoPagamento MetodoPagamento { get; set; }
         public int ServicoId { get; set; }
-
-        /// <summary>
-        /// Lista de adicionais selecionados pelo barbeiro ao editar.
-        /// </summary>
         public List<AdicionalRequest>? Adicionais { get; set; }
+        public List<ProdutoVendaRequest>? Produtos { get; set; }
     }
 }
