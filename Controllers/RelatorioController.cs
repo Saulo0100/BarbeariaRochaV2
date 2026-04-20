@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace BarbeariaRocha.Controllers
 {
     [ApiController]
-    [Route("api/v1/relatorio")]
+    [Route("api/relatorio")]
     [Authorize]
     public class RelatorioController(IRelatorioApp app) : BaseController
     {

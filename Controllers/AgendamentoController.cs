@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace BarbeariaRocha.Controllers
 {
     [ApiController]
-    [Route("api/v1/agendamento")]
+    [Route("api/agendamento")]
     public class AgendamentoController(IAgendamentoApp app, IAdicionalApp adicionalApp) : BaseController
     {
         private readonly IAgendamentoApp _app = app;

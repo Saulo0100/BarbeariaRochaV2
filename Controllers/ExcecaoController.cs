@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace BarbeariaRocha.Controllers
 {
     [ApiController]
-    [Route("api/v1/[controller]")]
+    [Route("api/[controller]")]
     public class ExcecaoController(IExcecaoApp excecaoApp) : ControllerBase
     {
         private readonly IExcecaoApp _excecaoApp = excecaoApp;

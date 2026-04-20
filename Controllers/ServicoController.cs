@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace BarbeariaRocha.Controllers
 {
     [ApiController]
-    [Route("api/v1/[controller]")]
+    [Route("api/[controller]")]
     public class ServicoController(IServicoApp app) : BaseController
     {
         private readonly IServicoApp _app = app;

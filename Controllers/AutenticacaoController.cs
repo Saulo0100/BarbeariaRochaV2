@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace BarbeariaRocha.Controllers
 {
     [ApiController]
-    [Route("api/v1/[controller]")]
+    [Route("api/[controller]")]
     public class AutenticacaoController(IAutenticacaoApp app) : BaseController
     {
         public readonly IAutenticacaoApp _app = app;

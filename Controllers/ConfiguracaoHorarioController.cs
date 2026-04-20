@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace BarbeariaRocha.Controllers
 {
     [ApiController]
-    [Route("api/v1/configuracao-horario")]
+    [Route("api/configuracao-horario")]
     public class ConfiguracaoHorarioController(IConfiguracaoHorarioApp app) : ControllerBase
     {
         private readonly IConfiguracaoHorarioApp _app = app;
